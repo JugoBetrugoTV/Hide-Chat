@@ -311,13 +311,45 @@ function ns.InitConfig()
     table.insert(UISpecialFrames, "HideChatConfigFrame")
 
     -- ==================== SCROLL ====================
-    local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", frame,
-        "UIPanelScrollFrameTemplate")
+    local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", frame)
     scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -28, 10)
 
     content = CreateFrame("Frame", "HideChatConfigContent", scroll)
     content:SetSize(CW, 1060)
     scroll:SetScrollChild(content)
+
+    -- Manual scrollbar (replaces removed UIPanelScrollFrameTemplate)
+    local bar = CreateFrame("Slider", nil, scroll, "BackdropTemplate")
+    bar:SetWidth(14); bar:SetPoint("TOPRIGHT", frame, -8, -56)
+    bar:SetPoint("BOTTOMRIGHT", frame, -8, 10)
+    bar:SetMinMaxValues(0, 1); bar:SetValueStep(1)
+    bar:SetBackdrop({ bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+        edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+        edgeSize = 8, tile = true, tileSize = 8,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+    local thumb = bar:CreateTexture(nil, "OVERLAY")
+    thumb:SetSize(14, 24)
+    thumb:SetTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
+    bar:SetThumbTexture(thumb)
+
+    local function UpdateScrollRange()
+        local visH = scroll:GetHeight()
+        local childH = content:GetHeight()
+        local maxScroll = math.max(childH - visH, 0)
+        bar:SetMinMaxValues(0, maxScroll)
+    end
+    scroll:SetScript("OnSizeChanged", UpdateScrollRange)
+    content:SetScript("OnSizeChanged", UpdateScrollRange)
+
+    bar:SetScript("OnValueChanged", function(_, val)
+        scroll:SetVerticalScroll(val)
+    end)
+    scroll:SetScript("OnMouseWheel", function(_, delta)
+        local cur = bar:GetValue()
+        local step = 40
+        bar:SetValue(cur - delta * step)
+    end)
+    scroll:EnableMouseWheel(true)
 
     -- ==================== CONTENT ====================
     local PAD = 8   -- card inner padding
