@@ -1,9 +1,5 @@
 local addonName, ns = ...
 
--- Immediate load confirmation (runs at file-load time, before PLAYER_LOGIN)
--- If you do NOT see this message, the addon files are not being loaded.
-print("|cFF00FF00HideChat:|r Lua loaded (" .. addonName .. ")")
-
 ---------------------------------------------------------------------------
 -- Keybinding header / label (shown in Key Bindings UI)
 ---------------------------------------------------------------------------
@@ -56,6 +52,7 @@ local anchor = CreateFrame("Frame", "HideChatAnchor", UIParent)
 anchor:Hide()
 
 local savedParents  = {}
+local savedShown    = {}
 local alphaBackup   = {}
 local suppressAlpha = false
 local activeFade    = nil
@@ -166,6 +163,7 @@ local function ReparentHide()
     for _, el in ipairs(ns.GetChatElements()) do
         if not savedParents[el] then
             savedParents[el] = el:GetParent()
+            savedShown[el]   = el:IsShown()
         end
         el:SetParent(anchor)
     end
@@ -174,9 +172,10 @@ end
 local function ReparentShow()
     for el, parent in pairs(savedParents) do
         el:SetParent(parent)
-        el:Show()
+        if savedShown[el] then el:Show() end
     end
     savedParents = {}
+    savedShown   = {}
     if FCF_SelectDockFrame and ChatFrame1 then
         FCF_SelectDockFrame(ChatFrame1)
     end
@@ -515,8 +514,6 @@ events:SetScript("OnEvent", function(_, event)
         if ns.InitButton   then SafeCall("InitButton",   ns.InitButton)   end
         if ns.InitConfig   then SafeCall("InitConfig",   ns.InitConfig)   end
         if ns.InitFeatures then SafeCall("InitFeatures", ns.InitFeatures) end
-
-        print("|cFF00FF00HideChat v" .. ns.version .. " loaded.|r Type /hc for toggle, /hc config for settings.")
 
     elseif event == "PLAYER_REGEN_DISABLED" then
         if HideChatDB.combat and not ns.isHidden then

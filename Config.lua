@@ -13,14 +13,18 @@ local function Header(parent, text, x, y)
     return fs
 end
 
+local function SafeSetTexture(widget, method, path, ...)
+    pcall(widget[method], widget, path, ...)
+end
+
 local function Checkbox(parent, label, x, y, key, onToggle)
     local cb = CreateFrame("CheckButton", nil, parent)
     cb:SetSize(24, 24)
     cb:SetPoint("TOPLEFT", x, y)
-    cb:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
-    cb:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
-    cb:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    SafeSetTexture(cb, "SetNormalTexture", "Interface\\Buttons\\UI-CheckBox-Up")
+    SafeSetTexture(cb, "SetPushedTexture", "Interface\\Buttons\\UI-CheckBox-Down")
+    SafeSetTexture(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
+    SafeSetTexture(cb, "SetCheckedTexture", "Interface\\Buttons\\UI-CheckBox-Check")
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     t:SetPoint("LEFT", cb, "RIGHT", 4, 0)
     t:SetText(label)
@@ -43,10 +47,10 @@ local function InstanceCheckbox(parent, label, x, y, subKey)
     local cb = CreateFrame("CheckButton", nil, parent)
     cb:SetSize(20, 20)
     cb:SetPoint("TOPLEFT", x, y)
-    cb:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
-    cb:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
-    cb:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    SafeSetTexture(cb, "SetNormalTexture", "Interface\\Buttons\\UI-CheckBox-Up")
+    SafeSetTexture(cb, "SetPushedTexture", "Interface\\Buttons\\UI-CheckBox-Down")
+    SafeSetTexture(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
+    SafeSetTexture(cb, "SetCheckedTexture", "Interface\\Buttons\\UI-CheckBox-Check")
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("LEFT", cb, "RIGHT", 2, 0)
     t:SetText(label)
@@ -172,17 +176,20 @@ function ns.InitConfig()
     frame = CreateFrame("Frame", "HideChatConfigFrame", UIParent,
         BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:SetSize(PW, PH); frame:SetPoint("CENTER")
+    frame:Hide()  -- hide immediately so partial init errors don't leave it visible
     frame:SetFrameStrata("DIALOG"); frame:SetMovable(true)
     frame:SetClampedToScreen(true); frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetBackdrop({
-        bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 8, right = 8, top = 8, bottom = 8 },
-    })
+    if frame.SetBackdrop then
+        pcall(frame.SetBackdrop, frame, {
+            bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 32,
+            insets = { left = 8, right = 8, top = 8, bottom = 8 },
+        })
+    end
 
     -- Title + version
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
