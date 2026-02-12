@@ -1,5 +1,9 @@
 local addonName, ns = ...
 
+-- Immediate load confirmation (runs at file-load time, before PLAYER_LOGIN)
+-- If you do NOT see this message, the addon files are not being loaded.
+print("|cFF00FF00HideChat:|r Lua loaded (" .. addonName .. ")")
+
 ---------------------------------------------------------------------------
 -- Keybinding header / label (shown in Key Bindings UI)
 ---------------------------------------------------------------------------
