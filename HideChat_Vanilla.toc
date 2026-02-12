@@ -1,0 +1,9 @@
+## Interface: 11505
+## Title: HideChat
+## Notes: Hide and show the chat window with a slash command or keybind. (Classic Era)
+## Author: JugoBetrugoTV
+## Version: 1.0.0
+## SavedVariables: HideChatDB
+
+Bindings.xml
+HideChat.lua

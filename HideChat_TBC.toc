@@ -1,0 +1,9 @@
+## Interface: 20504
+## Title: HideChat
+## Notes: Hide and show the chat window with a slash command or keybind. (The Burning Crusade Classic Anniversary)
+## Author: JugoBetrugoTV
+## Version: 1.0.0
+## SavedVariables: HideChatDB
+
+Bindings.xml
+HideChat.lua
