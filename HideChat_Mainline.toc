@@ -1,6 +1,6 @@
-## Interface: 110005
+## Interface: 120000
 ## Title: HideChat
-## Notes: Hide and show the chat window with a slash command, keybind or button. (Midnight / Retail)
+## Notes: Hide and show the chat window with a slash command, keybind or button. (Midnight)
 ## Author: JugoBetrugoTV
 ## Version: 1.2.0
 ## IconTexture: Interface\GossipFrame\ChatBubbleGossipIcon

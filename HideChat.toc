@@ -1,4 +1,4 @@
-## Interface: 110005
+## Interface: 120000
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button.
 ## Author: JugoBetrugoTV

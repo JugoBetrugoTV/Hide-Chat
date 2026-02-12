@@ -1,4 +1,4 @@
-## Interface: 50401
+## Interface: 50503
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Mists of Pandaria Classic)
 ## Author: JugoBetrugoTV
