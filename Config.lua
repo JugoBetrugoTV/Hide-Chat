@@ -211,10 +211,10 @@ end
 ---------------------------------------------------------------------------
 local function RefreshDeps()
     if not widgets then return end
-    widgets.combatRestore:SetOptionEnabled(HideChatDB.combat)
-    widgets.fadeSlider:SetOptionEnabled(HideChatDB.fade)
-    widgets.inactivityReshow:SetOptionEnabled(HideChatDB.inactivityTimer > 0)
-    for _, cb in ipairs(widgets.instChecks) do
+    if widgets.combatRestore   then widgets.combatRestore:SetOptionEnabled(HideChatDB.combat) end
+    if widgets.fadeSlider       then widgets.fadeSlider:SetOptionEnabled(HideChatDB.fade) end
+    if widgets.inactivityReshow then widgets.inactivityReshow:SetOptionEnabled(HideChatDB.inactivityTimer > 0) end
+    for _, cb in ipairs(widgets.instChecks or {}) do
         cb:SetOptionEnabled(HideChatDB.instanceHide)
     end
 end
