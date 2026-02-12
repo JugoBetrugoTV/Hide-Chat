@@ -242,7 +242,8 @@ StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
     text = "HideChat – New profile name:",
     button1 = "Create", button2 = "Cancel", hasEditBox = true,
     OnAccept = function(self)
-        local n = self.editBox:GetText()
+        local eb = self.EditBox or self.editBox
+        local n = eb and eb:GetText()
         if n and n ~= "" then
             ns.CreateProfile(n)
             if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
@@ -397,7 +398,7 @@ function ns.InitConfig()
     Y = Y - 90
 
     ---- CARD: Automation ─────────────────────────────────────
-    local c3 = Card(content, "Automation", 0, Y, CW, 210)
+    local c3 = Card(content, "Automation", 0, Y, CW, 182)
     local y3 = -26
     checkboxes.instanceHide = Checkbox(c3, "Auto-hide in instances", PAD, y3,
         "instanceHide", function() RefreshDeps() end)
@@ -419,10 +420,7 @@ function ns.InitConfig()
     checkboxes.inactivityReshow = Checkbox(c3, "Show chat on new message", PAD + 8, y3,
         "inactivityReshow")
     widgets.inactivityReshow = checkboxes.inactivityReshow
-    y3 = y3 - 28
-    checkboxes.screenshotHide = Checkbox(c3, "Hide chat during screenshots", PAD, y3,
-        "screenshotHide")
-    Y = Y - 218
+    Y = Y - 190
 
     ---- CARD: Appearance ─────────────────────────────────────
     local c4 = Card(content, "Appearance", 0, Y, CW, 175)
@@ -443,19 +441,14 @@ function ns.InitConfig()
     Y = Y - 183
 
     ---- CARD: Chat ───────────────────────────────────────────
-    local c5 = Card(content, "Chat", 0, Y, CW, 108)
+    local c5 = Card(content, "Chat", 0, Y, CW, 82)
     local y5 = -26
     checkboxes.whisperNotify = Checkbox(c5, "Blink button on whisper", PAD, y5,
         "whisperNotify")
     y5 = y5 - 26
     checkboxes.whisperPass = Checkbox(c5, "Show whispers while hidden", PAD, y5,
         "whisperPass")
-    y5 = y5 - 26
-    checkboxes.keepCombatLog = Checkbox(c5, "Keep combat log visible", PAD, y5,
-        "keepCombatLog", function()
-            if ns.isHidden then ns.ShowChat(true); ns.HideChat(true) end
-        end)
-    Y = Y - 116
+    Y = Y - 90
 
     ---- CARD: Compatibility ──────────────────────────────────
     local c6 = Card(content, "Compatibility", 0, Y, CW, 54)
