@@ -2,61 +2,103 @@ local addonName, ns = ...
 
 local frame, content, checkboxes, widgets
 
--- Theme colors
-local ACCENT   = { 0.00, 0.75, 0.35 }   -- green accent
-local TITLE_BG = { 0.06, 0.06, 0.10 }    -- title bar background
-local PANEL_BG = { 0.04, 0.04, 0.06 }    -- main panel background
-local SECTION  = { 0.80, 0.60, 0.00 }    -- section header gold
-local BTN_BG   = { 0.14, 0.14, 0.20 }    -- button background
-local BTN_HL   = { 0.22, 0.22, 0.30 }    -- button hover
-local BORDER   = { 0.20, 0.20, 0.25 }    -- frame border
+---------------------------------------------------------------------------
+-- THEME  (teal / dark-slate — no recycled WoW dialog textures)
+---------------------------------------------------------------------------
+local C = {
+    accent  = { 0.18, 0.83, 0.75 },   -- teal
+    dimAcc  = { 0.10, 0.50, 0.45 },   -- dim teal
+    bg      = { 0.05, 0.06, 0.08 },   -- deep navy
+    cardBg  = { 0.08, 0.10, 0.13 },   -- card panels
+    border  = { 0.16, 0.18, 0.22 },   -- subtle borders
+    text    = { 0.88, 0.90, 0.93 },   -- light text
+    dim     = { 0.42, 0.44, 0.48 },   -- muted text
+    danger  = { 0.92, 0.35, 0.35 },   -- red
+    btnBg   = { 0.11, 0.13, 0.17 },   -- button bg
+    btnBrd  = { 0.20, 0.22, 0.28 },   -- button border
+}
+
+local function rgb(t) return t[1], t[2], t[3] end
 
 ---------------------------------------------------------------------------
--- UI widget factories  (template-free → works in every WoW version)
+-- Draw helpers
 ---------------------------------------------------------------------------
-
-local function Header(parent, text, x, y)
-    local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    fs:SetPoint("TOPLEFT", x, y)
-    fs:SetText("|cFFFFD100" .. text .. "|r")
-    -- Decorative underline
-    local line = parent:CreateTexture(nil, "ARTWORK")
-    line:SetHeight(1)
-    line:SetPoint("TOPLEFT", x, y - 15)
-    line:SetPoint("RIGHT", parent, "RIGHT", -12, 0)
-    line:SetColorTexture(SECTION[1], SECTION[2], SECTION[3], 0.25)
-    return fs
+local function HLine(parent, layer, sub, h, r, g, b, a)
+    local t = parent:CreateTexture(nil, layer or "ARTWORK", nil, sub or 0)
+    t:SetHeight(h or 1); t:SetColorTexture(r, g, b, a or 1)
+    return t
 end
 
-local function SafeSetTexture(widget, method, path, ...)
-    pcall(widget[method], widget, path, ...)
+local function BoxBorder(f, r, g, b, a)
+    local function E(p1, p2)
+        local t = f:CreateTexture(nil, "BORDER")
+        t:SetColorTexture(r, g, b, a or 0.6)
+        if p1 == "TOP" then
+            t:SetHeight(1); t:SetPoint("TOPLEFT"); t:SetPoint("TOPRIGHT")
+        elseif p1 == "BOTTOM" then
+            t:SetHeight(1); t:SetPoint("BOTTOMLEFT"); t:SetPoint("BOTTOMRIGHT")
+        elseif p1 == "LEFT" then
+            t:SetWidth(1); t:SetPoint("TOPLEFT"); t:SetPoint("BOTTOMLEFT")
+        elseif p1 == "RIGHT" then
+            t:SetWidth(1); t:SetPoint("TOPRIGHT"); t:SetPoint("BOTTOMRIGHT")
+        end
+    end
+    E("TOP"); E("BOTTOM"); E("LEFT"); E("RIGHT")
+end
+
+---------------------------------------------------------------------------
+-- Card: section panel with border + accent top-line + title
+---------------------------------------------------------------------------
+local function Card(parent, title, x, y, w, h)
+    local card = CreateFrame("Frame", nil, parent)
+    card:SetSize(w, h); card:SetPoint("TOPLEFT", x, y)
+
+    local bg = card:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(rgb(C.cardBg), 0.95)
+
+    BoxBorder(card, rgb(C.border), 0.45)
+
+    -- Teal accent at top
+    local acc = card:CreateTexture(nil, "BORDER", nil, 1)
+    acc:SetHeight(2); acc:SetPoint("TOPLEFT"); acc:SetPoint("TOPRIGHT")
+    acc:SetColorTexture(rgb(C.accent), 0.65)
+
+    if title then
+        local fs = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fs:SetPoint("TOPLEFT", 10, -8)
+        fs:SetText("|cFF" .. "2DD4BF" .. title .. "|r")
+    end
+    return card
+end
+
+---------------------------------------------------------------------------
+-- Widgets
+---------------------------------------------------------------------------
+local function SafeTex(w, m, p, ...)
+    pcall(w[m], w, p, ...)
 end
 
 local function Checkbox(parent, label, x, y, key, onToggle)
     local cb = CreateFrame("CheckButton", nil, parent)
-    cb:SetSize(24, 24)
-    cb:SetPoint("TOPLEFT", x, y)
-    SafeSetTexture(cb, "SetNormalTexture", "Interface\\Buttons\\UI-CheckBox-Up")
-    SafeSetTexture(cb, "SetPushedTexture", "Interface\\Buttons\\UI-CheckBox-Down")
-    SafeSetTexture(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    SafeSetTexture(cb, "SetCheckedTexture", "Interface\\Buttons\\UI-CheckBox-Check")
-    -- Fallback check mark if textures don't exist
-    local checkMark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    checkMark:SetPoint("CENTER", 0, 0)
-    checkMark:SetText("")
-    cb._checkMark = checkMark
-    cb:SetScript("OnShow", function(self)
-        self._checkMark:SetText(self:GetChecked() and "|cFF00FF00✓|r" or "")
-    end)
+    cb:SetSize(22, 22); cb:SetPoint("TOPLEFT", x, y)
+    SafeTex(cb, "SetNormalTexture",    "Interface\\Buttons\\UI-CheckBox-Up")
+    SafeTex(cb, "SetPushedTexture",    "Interface\\Buttons\\UI-CheckBox-Down")
+    SafeTex(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
+    SafeTex(cb, "SetCheckedTexture",   "Interface\\Buttons\\UI-CheckBox-Check")
+    -- Fallback: teal check mark text
+    local mark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    mark:SetPoint("CENTER", 0, 0); mark:SetText("")
+    cb._mark = mark
+    local function syncMark(self)
+        self._mark:SetText(self:GetChecked() and "|cFF2DD4BF" .. "✓" .. "|r" or "")
+    end
+    cb:SetScript("OnShow", syncMark)
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    t:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-    t:SetText(label)
-    cb.label = t
-    cb._key  = key
+    t:SetPoint("LEFT", cb, "RIGHT", 4, 0); t:SetText(label)
+    cb.label = t; cb._key = key
     cb:SetScript("OnClick", function(self)
         local v = self:GetChecked() and true or false
-        HideChatDB[key] = v
-        self._checkMark:SetText(v and "|cFF00FF00✓|r" or "")
+        HideChatDB[key] = v; syncMark(self)
         if onToggle then onToggle(v) end
     end)
     function cb:SetOptionEnabled(on)
@@ -66,31 +108,26 @@ local function Checkbox(parent, label, x, y, key, onToggle)
     return cb
 end
 
---- Instance-type checkbox (writes into HideChatDB.instanceTypes[subKey])
 local function InstanceCheckbox(parent, label, x, y, subKey)
     local cb = CreateFrame("CheckButton", nil, parent)
-    cb:SetSize(20, 20)
-    cb:SetPoint("TOPLEFT", x, y)
-    SafeSetTexture(cb, "SetNormalTexture", "Interface\\Buttons\\UI-CheckBox-Up")
-    SafeSetTexture(cb, "SetPushedTexture", "Interface\\Buttons\\UI-CheckBox-Down")
-    SafeSetTexture(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    SafeSetTexture(cb, "SetCheckedTexture", "Interface\\Buttons\\UI-CheckBox-Check")
-    local checkMark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    checkMark:SetPoint("CENTER", 0, 0)
-    checkMark:SetText("")
-    cb._checkMark = checkMark
-    cb:SetScript("OnShow", function(self)
-        self._checkMark:SetText(self:GetChecked() and "|cFF00FF00✓|r" or "")
-    end)
+    cb:SetSize(18, 18); cb:SetPoint("TOPLEFT", x, y)
+    SafeTex(cb, "SetNormalTexture",    "Interface\\Buttons\\UI-CheckBox-Up")
+    SafeTex(cb, "SetPushedTexture",    "Interface\\Buttons\\UI-CheckBox-Down")
+    SafeTex(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
+    SafeTex(cb, "SetCheckedTexture",   "Interface\\Buttons\\UI-CheckBox-Check")
+    local mark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    mark:SetPoint("CENTER", 0, 0); mark:SetText("")
+    cb._mark = mark
+    local function syncMark(self)
+        self._mark:SetText(self:GetChecked() and "|cFF2DD4BF" .. "✓" .. "|r" or "")
+    end
+    cb:SetScript("OnShow", syncMark)
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    t:SetPoint("LEFT", cb, "RIGHT", 2, 0)
-    t:SetText(label)
-    cb.label  = t
-    cb._subKey = subKey
+    t:SetPoint("LEFT", cb, "RIGHT", 2, 0); t:SetText(label)
+    cb.label = t; cb._subKey = subKey
     cb:SetScript("OnClick", function(self)
         local v = self:GetChecked() and true or false
-        HideChatDB.instanceTypes[subKey] = v
-        self._checkMark:SetText(v and "|cFF00FF00✓|r" or "")
+        HideChatDB.instanceTypes[subKey] = v; syncMark(self)
     end)
     function cb:SetOptionEnabled(on)
         if on then self:Enable(); self.label:SetFontObject("GameFontHighlightSmall")
@@ -99,83 +136,78 @@ local function InstanceCheckbox(parent, label, x, y, subKey)
     return cb
 end
 
-local function Slider(parent, label, x, y, width, minVal, maxVal, step, key, fmt)
+local function Slider(parent, label, x, y, width, lo, hi, step, key, fmt)
     local wrap = CreateFrame("Frame", nil, parent)
-    wrap:SetSize(width + 60, 36)
-    wrap:SetPoint("TOPLEFT", x, y)
+    wrap:SetSize(width + 60, 36); wrap:SetPoint("TOPLEFT", x, y)
     local title = wrap:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     title:SetPoint("TOPLEFT", 0, 0); title:SetText(label)
     wrap.title = title
     local value = wrap:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    value:SetPoint("TOPRIGHT", 0, 0)
-    wrap.value = value
+    value:SetPoint("TOPRIGHT", 0, 0); wrap.value = value
     local sl = CreateFrame("Slider", nil, wrap)
     sl:SetSize(width, 14); sl:SetPoint("TOPLEFT", 0, -16)
-    sl:SetOrientation("HORIZONTAL")
-    sl:SetMinMaxValues(minVal, maxVal); sl:SetValueStep(step)
+    sl:SetOrientation("HORIZONTAL"); sl:SetMinMaxValues(lo, hi); sl:SetValueStep(step)
     if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
     sl:EnableMouse(true)
-    -- Track background
-    local bg = sl:CreateTexture(nil, "BACKGROUND")
-    bg:SetPoint("TOPLEFT", 0, -4); bg:SetPoint("BOTTOMRIGHT", 0, 4)
-    bg:SetColorTexture(0.10, 0.10, 0.14, 1); wrap._bg = bg
-    -- Track fill (accent colored)
+    -- Track
+    local track = sl:CreateTexture(nil, "BACKGROUND")
+    track:SetPoint("TOPLEFT", 0, -4); track:SetPoint("BOTTOMRIGHT", 0, 4)
+    track:SetColorTexture(0.08, 0.09, 0.12, 1); wrap._track = track
+    -- Fill (teal)
     local fill = sl:CreateTexture(nil, "BACKGROUND", nil, 1)
-    fill:SetPoint("TOPLEFT", bg, "TOPLEFT"); fill:SetHeight(6)
-    fill:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.4)
-    wrap._fill = fill
+    fill:SetPoint("TOPLEFT", track, "TOPLEFT"); fill:SetHeight(6)
+    fill:SetColorTexture(rgb(C.accent), 0.50); wrap._fill = fill
     -- Thumb
     local th = sl:CreateTexture(nil, "OVERLAY")
-    th:SetSize(12, 18); th:SetColorTexture(0.65, 0.65, 0.70, 1)
+    th:SetSize(10, 16); th:SetColorTexture(rgb(C.accent), 0.9)
     sl:SetThumbTexture(th); wrap._thumb = th
     sl:SetScript("OnValueChanged", function(self, val)
         val = math.floor(val / step + 0.5) * step
         HideChatDB[key] = val
         value:SetText(fmt and fmt(val) or tostring(val))
-        -- Update fill width
-        local min, max = self:GetMinMaxValues()
-        local pct = (max > min) and ((val - min) / (max - min)) or 0
-        fill:SetWidth(math.max(1, bg:GetWidth() * pct))
+        local mn, mx = self:GetMinMaxValues()
+        local pct = (mx > mn) and ((val - mn) / (mx - mn)) or 0
+        fill:SetWidth(math.max(1, track:GetWidth() * pct))
     end)
     wrap.slider = sl; wrap._key = key
     function wrap:SetOptionEnabled(on)
         if on then
             self.slider:EnableMouse(true)
             self.title:SetFontObject("GameFontHighlight"); self.value:SetFontObject("GameFontHighlight")
-            self._thumb:SetColorTexture(0.65, 0.65, 0.70, 1)
-            self._bg:SetColorTexture(0.10, 0.10, 0.14, 1)
+            self._thumb:SetColorTexture(rgb(C.accent), 0.9)
+            self._track:SetColorTexture(0.08, 0.09, 0.12, 1)
         else
             self.slider:EnableMouse(false)
             self.title:SetFontObject("GameFontDisable"); self.value:SetFontObject("GameFontDisable")
-            self._thumb:SetColorTexture(0.30, 0.30, 0.33, 1)
-            self._bg:SetColorTexture(0.08, 0.08, 0.10, 1)
+            self._thumb:SetColorTexture(0.22, 0.24, 0.28, 0.7)
+            self._track:SetColorTexture(0.06, 0.07, 0.09, 1)
         end
     end
     return wrap
 end
 
-local function ActionButton(parent, label, x, y, w, onClick)
+local function Btn(parent, label, x, y, w, onClick)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, 24); b:SetPoint("TOPLEFT", x, y)
     -- Border
     local bd = b:CreateTexture(nil, "BACKGROUND", nil, -1)
     bd:SetPoint("TOPLEFT", -1, 1); bd:SetPoint("BOTTOMRIGHT", 1, -1)
-    bd:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.6)
-    -- Background
+    bd:SetColorTexture(rgb(C.btnBrd), 0.5)
+    -- Bg
     local bg = b:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints()
-    bg:SetColorTexture(BTN_BG[1], BTN_BG[2], BTN_BG[3], 0.9)
+    bg:SetColorTexture(rgb(C.btnBg), 0.9)
     -- Hover
     local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints()
-    hl:SetColorTexture(1, 1, 1, 0.06)
+    hl:SetColorTexture(rgb(C.accent), 0.08)
     -- Label
-    local t = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local t = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("CENTER"); t:SetText(label); b.label = t
     b:SetScript("OnClick", onClick)
     return b
 end
 
 ---------------------------------------------------------------------------
--- Dependent-option refresh
+-- Dependency refreshes
 ---------------------------------------------------------------------------
 local function RefreshDeps()
     if not widgets then return end
@@ -188,360 +220,287 @@ local function RefreshDeps()
 end
 
 ---------------------------------------------------------------------------
--- Profile static popups
+-- Profile popups
 ---------------------------------------------------------------------------
 StaticPopupDialogs = StaticPopupDialogs or {}
-
 StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
     text = "HideChat – New profile name:",
-    button1 = "Create", button2 = "Cancel",
-    hasEditBox = true,
+    button1 = "Create", button2 = "Cancel", hasEditBox = true,
     OnAccept = function(self)
-        local name = self.editBox:GetText()
-        if name and name ~= "" then
-            ns.CreateProfile(name)
+        local n = self.editBox:GetText()
+        if n and n ~= "" then
+            ns.CreateProfile(n)
             if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
         end
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
-
 StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
     text = "HideChat – Delete profile \"%s\"?",
     button1 = "Delete", button2 = "Cancel",
     OnAccept = function()
-        local name = HideChatCharDB.activeProfile
-        ns.DeleteProfile(name)
+        ns.DeleteProfile(HideChatCharDB.activeProfile)
         if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 
 ---------------------------------------------------------------------------
--- Build the config frame (called once from PLAYER_LOGIN)
+-- Build config frame
 ---------------------------------------------------------------------------
 function ns.InitConfig()
     if frame then return end
 
-    local PW, PH = 380, 580
-    local CW, CH = PW - 50, 940
+    local FW, FH = 400, 600
+    local CW = FW - 52
 
-    frame = CreateFrame("Frame", "HideChatConfigFrame", UIParent,
-        BackdropTemplateMixin and "BackdropTemplate" or nil)
-    frame:SetSize(PW, PH); frame:SetPoint("CENTER")
-    frame:Hide()
-    frame:SetFrameStrata("DIALOG"); frame:SetMovable(true)
-    frame:SetClampedToScreen(true); frame:EnableMouse(true)
+    frame = CreateFrame("Frame", "HideChatConfigFrame", UIParent)
+    frame:SetSize(FW, FH); frame:SetPoint("CENTER")
+    frame:Hide(); frame:SetFrameStrata("DIALOG")
+    frame:SetMovable(true); frame:SetClampedToScreen(true); frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 
-    -- Try backdrop, fall back to flat background
-    if frame.SetBackdrop then
-        pcall(frame.SetBackdrop, frame, {
-            bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            tile = true, tileSize = 32, edgeSize = 32,
-            insets = { left = 8, right = 8, top = 8, bottom = 8 },
-        })
-    end
+    -- Solid dark background (no WoW dialog textures)
+    local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+    bg:SetAllPoints(); bg:SetColorTexture(rgb(C.bg), 0.98)
 
-    -- Fallback flat background (always present behind backdrop)
-    local panelBg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
-    panelBg:SetAllPoints()
-    panelBg:SetColorTexture(PANEL_BG[1], PANEL_BG[2], PANEL_BG[3], 0.97)
+    -- Frame border
+    BoxBorder(frame, rgb(C.border), 0.55)
 
-    -- Fallback border edges
-    local function Edge(p1, rel, p2, w, h, ox, oy)
-        local e = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-        e:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.5)
-        if w and h then e:SetSize(w, h) end
-        if p1 == "TOPLEFT" then
-            e:SetPoint("TOPLEFT", ox or 0, oy or 0)
-            e:SetPoint(p2, rel, p2, ox or 0, oy or 0)
-        else
-            e:SetPoint(p1, ox or 0, oy or 0)
-            e:SetPoint(p2, ox or 0, oy or 0)
-        end
-        return e
-    end
-    -- Top border
-    local topEdge = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-    topEdge:SetHeight(1); topEdge:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.5)
-    topEdge:SetPoint("TOPLEFT", 0, 0); topEdge:SetPoint("TOPRIGHT", 0, 0)
-    -- Bottom border
-    local botEdge = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-    botEdge:SetHeight(1); botEdge:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.5)
-    botEdge:SetPoint("BOTTOMLEFT", 0, 0); botEdge:SetPoint("BOTTOMRIGHT", 0, 0)
-    -- Left border
-    local leftEdge = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-    leftEdge:SetWidth(1); leftEdge:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.5)
-    leftEdge:SetPoint("TOPLEFT", 0, 0); leftEdge:SetPoint("BOTTOMLEFT", 0, 0)
-    -- Right border
-    local rightEdge = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
-    rightEdge:SetWidth(1); rightEdge:SetColorTexture(BORDER[1], BORDER[2], BORDER[3], 0.5)
-    rightEdge:SetPoint("TOPRIGHT", 0, 0); rightEdge:SetPoint("BOTTOMRIGHT", 0, 0)
+    -- ==================== TITLE BAR ====================
+    local titleBg = frame:CreateTexture(nil, "ARTWORK")
+    titleBg:SetHeight(50); titleBg:SetPoint("TOPLEFT", 1, -1); titleBg:SetPoint("TOPRIGHT", -1, -1)
+    titleBg:SetColorTexture(0.04, 0.05, 0.07, 1)
 
-    -- Title bar background
-    local titleBar = frame:CreateTexture(nil, "ARTWORK")
-    titleBar:SetHeight(44)
-    titleBar:SetPoint("TOPLEFT", 1, -1); titleBar:SetPoint("TOPRIGHT", -1, -1)
-    titleBar:SetColorTexture(TITLE_BG[1], TITLE_BG[2], TITLE_BG[3], 1)
+    -- Teal accent line
+    local accent = HLine(frame, "ARTWORK", 1, 2, rgb(C.accent), 0.75)
+    accent:SetPoint("TOPLEFT", titleBg, "BOTTOMLEFT")
+    accent:SetPoint("TOPRIGHT", titleBg, "BOTTOMRIGHT")
 
-    -- Green accent line under title bar
-    local accentLine = frame:CreateTexture(nil, "ARTWORK", nil, 1)
-    accentLine:SetHeight(2)
-    accentLine:SetPoint("TOPLEFT", titleBar, "BOTTOMLEFT", 0, 0)
-    accentLine:SetPoint("TOPRIGHT", titleBar, "BOTTOMRIGHT", 0, 0)
-    accentLine:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.7)
-
-    -- Title text
+    -- Title text  (teal "HideChat" + dim "Settings")
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -10)
-    title:SetText("|cFF00CC55HideChat|r |cFFAAAAAASettings|r")
+    title:SetPoint("TOPLEFT", 14, -12)
+    title:SetText("|cFF2DD4BFHideChat|r")
 
-    -- Version
+    local sub = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    sub:SetPoint("TOPLEFT", title, "TOPRIGHT", 6, -2)
+    sub:SetText("|cFF888888Settings|r")
+
     local ver = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    ver:SetPoint("TOP", title, "BOTTOM", 0, -2)
-    ver:SetText("v" .. (ns.version or "?"))
+    ver:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
+    ver:SetText("|cFF555555v" .. (ns.version or "?") .. "|r")
 
-    -- Close button (custom)
+    -- Close button
     local closeBtn = CreateFrame("Button", nil, frame)
-    closeBtn:SetSize(24, 24)
-    closeBtn:SetPoint("TOPRIGHT", -6, -6)
-    local closeBg = closeBtn:CreateTexture(nil, "BACKGROUND")
-    closeBg:SetAllPoints(); closeBg:SetColorTexture(0.5, 0.1, 0.1, 0.4)
-    local closeHl = closeBtn:CreateTexture(nil, "HIGHLIGHT")
-    closeHl:SetAllPoints(); closeHl:SetColorTexture(0.8, 0.15, 0.15, 0.6)
-    local closeText = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    closeText:SetPoint("CENTER", 0, 0); closeText:SetText("|cFFFFFFFFX|r")
+    closeBtn:SetSize(26, 26); closeBtn:SetPoint("TOPRIGHT", -8, -8)
+    local cBg = closeBtn:CreateTexture(nil, "BACKGROUND")
+    cBg:SetAllPoints(); cBg:SetColorTexture(rgb(C.danger), 0.15)
+    local cHl = closeBtn:CreateTexture(nil, "HIGHLIGHT")
+    cHl:SetAllPoints(); cHl:SetColorTexture(rgb(C.danger), 0.35)
+    local cTxt = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    cTxt:SetPoint("CENTER", 0, 0); cTxt:SetText("|cFFCC6666x|r")
     closeBtn:SetScript("OnClick", function() ns.ToggleConfig() end)
 
     table.insert(UISpecialFrames, "HideChatConfigFrame")
 
-    -- Scroll frame
+    -- ==================== SCROLL ====================
     local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", frame,
         "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", 12, -50)
-    scroll:SetPoint("BOTTOMRIGHT", -28, 12)
+    scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -28, 10)
 
     content = CreateFrame("Frame", "HideChatConfigContent", scroll)
-    content:SetSize(CW, CH)
+    content:SetSize(CW, 1060)
     scroll:SetScrollChild(content)
 
-    ---------- populate content -------------------------------------------
-    checkboxes = {}
-    widgets    = { instChecks = {} }
-    local L, Y = 4, -8
+    -- ==================== CONTENT ====================
+    checkboxes = {}; widgets = { instChecks = {} }
+    local PAD = 8   -- card inner padding
+    local Y = 0
 
-    ---- BUTTON -----------------------------------------------------------
-    Header(content, "Button", L, Y); Y = Y - 22
-    checkboxes.showButton = Checkbox(content, "Show toggle button", L, Y,
+    ---- CARD: General ────────────────────────────────────────
+    local c1 = Card(content, "General", 0, Y, CW, 150)
+    local y1 = -26
+    checkboxes.showButton = Checkbox(c1, "Show toggle button", PAD, y1,
         "showButton", function() if ns.UpdateButton then ns.UpdateButton() end end)
-    Y = Y - 26
-    checkboxes.lockButton = Checkbox(content, "Lock button position", L, Y, "lockButton")
-    Y = Y - 28
-    ActionButton(content, "Reset Position", L + 28, Y, 130, function()
+    y1 = y1 - 26
+    checkboxes.lockButton = Checkbox(c1, "Lock button position", PAD, y1, "lockButton")
+    y1 = y1 - 28
+    Btn(c1, "Reset Position", PAD + 26, y1, 120, function()
         if ns.ResetButtonPos then ns.ResetButtonPos() end
     end)
-    Y = Y - 30
-    checkboxes.showMinimap = Checkbox(content, "Show minimap button", L, Y,
+    y1 = y1 - 30
+    checkboxes.showMinimap = Checkbox(c1, "Show minimap button", PAD, y1,
         "showMinimap", function() if ns.UpdateMinimap then ns.UpdateMinimap() end end)
+    Y = Y - 158
 
-    ---- COMBAT -----------------------------------------------------------
-    Y = Y - 36
-    Header(content, "Combat", L, Y); Y = Y - 22
-    checkboxes.combat = Checkbox(content, "Auto-hide in combat", L, Y,
+    ---- CARD: Combat ─────────────────────────────────────────
+    local c2 = Card(content, "Combat", 0, Y, CW, 82)
+    checkboxes.combat = Checkbox(c2, "Auto-hide in combat", PAD, -26,
         "combat", function() RefreshDeps() end)
-    Y = Y - 26
-    checkboxes.combatRestore = Checkbox(content, "Auto-show after combat", L, Y, "combatRestore")
+    checkboxes.combatRestore = Checkbox(c2, "Auto-show after combat", PAD, -52, "combatRestore")
     widgets.combatRestore = checkboxes.combatRestore
+    Y = Y - 90
 
-    ---- AUTOMATION -------------------------------------------------------
-    Y = Y - 36
-    Header(content, "Automation", L, Y); Y = Y - 22
-
-    checkboxes.instanceHide = Checkbox(content, "Auto-hide in instances", L, Y,
+    ---- CARD: Automation ─────────────────────────────────────
+    local c3 = Card(content, "Automation", 0, Y, CW, 210)
+    local y3 = -26
+    checkboxes.instanceHide = Checkbox(c3, "Auto-hide in instances", PAD, y3,
         "instanceHide", function() RefreshDeps() end)
-    Y = Y - 26
-    local instLabels = { party = "Dungeons", raid = "Raids", pvp = "PvP", arena = "Arenas", scenario = "Scenarios" }
+    y3 = y3 - 26
+    local instLabels = { party="Dungeons", raid="Raids", pvp="PvP", arena="Arenas", scenario="Scenarios" }
     local instOrder  = { "party", "raid", "pvp", "arena", "scenario" }
-    local ix = L + 28
+    local ix = PAD + 26
     for _, key in ipairs(instOrder) do
-        local cb = InstanceCheckbox(content, instLabels[key], ix, Y, key)
+        local cb = InstanceCheckbox(c3, instLabels[key], ix, y3, key)
         widgets.instChecks[#widgets.instChecks + 1] = cb
-        ix = ix + 80
-        if ix > CW - 40 then ix = L + 28; Y = Y - 24 end
+        ix = ix + 78
+        if ix > CW - 60 then ix = PAD + 26; y3 = y3 - 22 end
     end
-
-    Y = Y - 36
-    local inactSlider = Slider(content, "Inactivity timer", L + 10, Y, 200,
+    y3 = y3 - 34
+    widgets.inactSlider = Slider(c3, "Inactivity timer", PAD + 8, y3, 200,
         0, 60, 5, "inactivityTimer",
         function(v) return v == 0 and "off" or (v .. "s") end)
-    widgets.inactSlider = inactSlider
-
-    Y = Y - 42
-    checkboxes.inactivityReshow = Checkbox(content, "Show chat on new message", L + 10, Y,
+    y3 = y3 - 40
+    checkboxes.inactivityReshow = Checkbox(c3, "Show chat on new message", PAD + 8, y3,
         "inactivityReshow")
     widgets.inactivityReshow = checkboxes.inactivityReshow
-
-    Y = Y - 30
-    checkboxes.screenshotHide = Checkbox(content, "Hide chat during screenshots", L, Y,
+    y3 = y3 - 28
+    checkboxes.screenshotHide = Checkbox(c3, "Hide chat during screenshots", PAD, y3,
         "screenshotHide")
+    Y = Y - 218
 
-    ---- APPEARANCE -------------------------------------------------------
-    Y = Y - 36
-    Header(content, "Appearance", L, Y); Y = Y - 22
-    checkboxes.fade = Checkbox(content, "Fade transition", L, Y,
+    ---- CARD: Appearance ─────────────────────────────────────
+    local c4 = Card(content, "Appearance", 0, Y, CW, 175)
+    local y4 = -26
+    checkboxes.fade = Checkbox(c4, "Fade transition", PAD, y4,
         "fade", function() RefreshDeps() end)
-    Y = Y - 32
-    local fadeSlider = Slider(content, "Fade duration", L + 10, Y, 200,
+    y4 = y4 - 30
+    widgets.fadeSlider = Slider(c4, "Fade duration", PAD + 8, y4, 200,
         0.1, 1.0, 0.1, "fadeDuration",
         function(v) return string.format("%.1fs", v) end)
-    widgets.fadeSlider = fadeSlider
-
-    Y = Y - 44
-    local opacSlider = Slider(content, "Hidden opacity", L + 10, Y, 200,
+    y4 = y4 - 42
+    widgets.opacSlider = Slider(c4, "Hidden opacity", PAD + 8, y4, 200,
         0, 1.0, 0.05, "opacity",
         function(v) return math.floor(v * 100) .. "%" end)
-    widgets.opacSlider = opacSlider
-
-    Y = Y - 44
-    checkboxes.mouseoverReveal = Checkbox(content, "Show on mouse-over", L, Y,
+    y4 = y4 - 42
+    checkboxes.mouseoverReveal = Checkbox(c4, "Show on mouse-over", PAD, y4,
         "mouseoverReveal")
+    Y = Y - 183
 
-    ---- CHAT -------------------------------------------------------------
-    Y = Y - 36
-    Header(content, "Chat", L, Y); Y = Y - 22
-    checkboxes.whisperNotify = Checkbox(content, "Blink button on whisper", L, Y,
+    ---- CARD: Chat ───────────────────────────────────────────
+    local c5 = Card(content, "Chat", 0, Y, CW, 108)
+    local y5 = -26
+    checkboxes.whisperNotify = Checkbox(c5, "Blink button on whisper", PAD, y5,
         "whisperNotify")
-    Y = Y - 26
-    checkboxes.whisperPass = Checkbox(content, "Show whispers while hidden", L, Y,
+    y5 = y5 - 26
+    checkboxes.whisperPass = Checkbox(c5, "Show whispers while hidden", PAD, y5,
         "whisperPass")
-    Y = Y - 26
-    checkboxes.keepCombatLog = Checkbox(content, "Keep combat log visible", L, Y,
+    y5 = y5 - 26
+    checkboxes.keepCombatLog = Checkbox(c5, "Keep combat log visible", PAD, y5,
         "keepCombatLog", function()
             if ns.isHidden then ns.ShowChat(true); ns.HideChat(true) end
         end)
+    Y = Y - 116
 
-    ---- COMPATIBILITY ----------------------------------------------------
-    Y = Y - 36
-    Header(content, "Compatibility", L, Y); Y = Y - 22
-    checkboxes.alphaMode = Checkbox(content, "Alpha mode (Chattynator / Prat / ElvUI)",
-        L, Y, "alphaMode", function()
+    ---- CARD: Compatibility ──────────────────────────────────
+    local c6 = Card(content, "Compatibility", 0, Y, CW, 54)
+    checkboxes.alphaMode = Checkbox(c6, "Alpha mode (Chattynator / Prat / ElvUI)",
+        PAD, -26, "alphaMode", function()
             if ns.isHidden then ns.ShowChat(true); ns.HideChat(true) end
         end)
+    Y = Y - 62
 
-    ---- PROFILES ---------------------------------------------------------
-    Y = Y - 40
-    Header(content, "Profiles", L, Y); Y = Y - 22
-
-    local profLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    profLabel:SetPoint("TOPLEFT", L, Y)
-    profLabel:SetText("Active: Default")
+    ---- CARD: Profiles ───────────────────────────────────────
+    local c7 = Card(content, "Profiles", 0, Y, CW, 92)
+    local profLabel = c7:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    profLabel:SetPoint("TOPLEFT", PAD, -28); profLabel:SetText("Active: Default")
     widgets.profLabel = profLabel
 
-    local profPrev = ActionButton(content, "<", L + 200, Y + 2, 28, function()
+    Btn(c7, "<", 200, -26, 28, function()
         local names = ns.GetProfileNames()
         if #names < 2 then return end
         local cur = HideChatCharDB.activeProfile
         for i, n in ipairs(names) do
             if n == cur then
-                local prev = names[i == 1 and #names or (i - 1)]
                 ns.SaveCurrentProfile()
-                ns.LoadProfile(prev)
+                ns.LoadProfile(names[i == 1 and #names or (i - 1)])
                 if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
                 return
             end
         end
     end)
-    local profNext = ActionButton(content, ">", L + 232, Y + 2, 28, function()
+    Btn(c7, ">", 232, -26, 28, function()
         local names = ns.GetProfileNames()
         if #names < 2 then return end
         local cur = HideChatCharDB.activeProfile
         for i, n in ipairs(names) do
             if n == cur then
-                local nxt = names[i == #names and 1 or (i + 1)]
                 ns.SaveCurrentProfile()
-                ns.LoadProfile(nxt)
+                ns.LoadProfile(names[i == #names and 1 or (i + 1)])
                 if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
                 return
             end
         end
     end)
 
-    Y = Y - 30
-    ActionButton(content, "New", L, Y, 70, function()
+    Btn(c7, "New", PAD, -60, 68, function()
         StaticPopup_Show("HIDECHAT_NEW_PROFILE")
     end)
-    ActionButton(content, "Copy", L + 76, Y, 70, function()
+    Btn(c7, "Copy", PAD + 74, -60, 68, function()
         StaticPopup_Show("HIDECHAT_NEW_PROFILE")
     end)
-    ActionButton(content, "Delete", L + 152, Y, 70, function()
+    Btn(c7, "Delete", PAD + 148, -60, 68, function()
         local name = HideChatCharDB.activeProfile
         if name == "Default" then
-            print("|cFF00FF00HideChat:|r Cannot delete Default profile.")
-            return
+            print("|cFF2DD4BFHideChat:|r Cannot delete Default profile."); return
         end
         StaticPopup_Show("HIDECHAT_DELETE_PROFILE", name)
     end)
+    Y = Y - 100
 
-    ---- HINT TEXT --------------------------------------------------------
-    Y = Y - 40
+    ---- HINT TEXT ────────────────────────────────────────────
+    Y = Y - 10
     local hint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", L, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
+    hint:SetPoint("TOPLEFT", 4, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
     hint:SetText(
-        "|cFF666666/hidechat|r or |cFF666666/hc|r — toggle\n" ..
-        "|cFF666666/hc config|r — this window\n" ..
-        "|cFF666666/hc status|r — diagnostics\n" ..
-        "|cFF666666/hc reset|r — restore defaults"
+        "|cFF555555/hidechat|r  or  |cFF555555/hc|r — toggle\n" ..
+        "|cFF555555/hc config|r — settings\n" ..
+        "|cFF555555/hc status|r — diagnostics\n" ..
+        "|cFF555555/hc reset|r  — restore defaults"
     )
 
-    -- Resize content to actual height
-    content:SetHeight(math.abs(Y) + 60)
-
+    content:SetHeight(math.abs(Y) + 80)
     frame:Hide()
 end
 
 ---------------------------------------------------------------------------
--- Refresh all widgets to match current HideChatDB
+-- Refresh widgets to match HideChatDB
 ---------------------------------------------------------------------------
 local function Refresh()
     if not frame then return end
     for _, cb in pairs(checkboxes) do
         cb:SetChecked(HideChatDB[cb._key])
-        if cb._checkMark then
-            cb._checkMark:SetText(cb:GetChecked() and "|cFF00FF00✓|r" or "")
-        end
+        if cb._mark then cb._mark:SetText(cb:GetChecked() and "|cFF2DD4BF✓|r" or "") end
     end
-    -- Instance type sub-checkboxes
     for _, cb in ipairs(widgets.instChecks) do
         cb:SetChecked(HideChatDB.instanceTypes[cb._subKey])
-        if cb._checkMark then
-            cb._checkMark:SetText(cb:GetChecked() and "|cFF00FF00✓|r" or "")
-        end
+        if cb._mark then cb._mark:SetText(cb:GetChecked() and "|cFF2DD4BF✓|r" or "") end
     end
-    -- Sliders
     if widgets.fadeSlider  then widgets.fadeSlider.slider:SetValue(HideChatDB.fadeDuration) end
     if widgets.opacSlider  then widgets.opacSlider.slider:SetValue(HideChatDB.opacity or 0) end
     if widgets.inactSlider then widgets.inactSlider.slider:SetValue(HideChatDB.inactivityTimer) end
-    -- Profile label
     if widgets.profLabel then
-        widgets.profLabel:SetText("Active: |cFFFFFFFF" .. (HideChatCharDB.activeProfile or "Default") .. "|r")
+        widgets.profLabel:SetText("Active: |cFFFFFFFF" ..
+            (HideChatCharDB.activeProfile or "Default") .. "|r")
     end
     RefreshDeps()
 end
 
 ---------------------------------------------------------------------------
--- Toggle the config window
----------------------------------------------------------------------------
 function ns.ToggleConfig()
     if not frame then ns.InitConfig() end
-    if frame:IsShown() then
-        ns.SaveCurrentProfile()
-        frame:Hide()
-    else
-        Refresh()
-        frame:Show()
-    end
+    if frame:IsShown() then ns.SaveCurrentProfile(); frame:Hide()
+    else Refresh(); frame:Show() end
 end

@@ -4,64 +4,82 @@ local btn         -- toggle button
 local minimapBtn  -- minimap button
 
 ---------------------------------------------------------------------------
--- Helper: draw a chat-bubble icon from layered textures
--- Returns table of texture refs for recoloring later
+-- THEME
 ---------------------------------------------------------------------------
-local function CreateBubbleIcon(parent, size)
-    local s = size or 30
-    local parts = {}
+local TEAL    = { 0.18, 0.83, 0.75 }   -- accent
+local CORAL   = { 0.95, 0.40, 0.40 }   -- hidden state
+local AMBER   = { 0.98, 0.75, 0.15 }   -- whisper blink
+local SLATE   = { 0.10, 0.12, 0.16 }   -- dark bg
 
-    -- Bubble body
-    local body = parent:CreateTexture(nil, "ARTWORK")
-    body:SetSize(s * 0.60, s * 0.38)
-    body:SetPoint("CENTER", parent, "CENTER", 0, s * 0.06)
-    parts.body = body
+---------------------------------------------------------------------------
+-- Helper: create a floating chat-bubble icon with shadow + shine
+---------------------------------------------------------------------------
+local function CreateBubble(parent, s)
+    local p = {}
 
-    -- Bubble tail
-    local tail = parent:CreateTexture(nil, "ARTWORK")
-    tail:SetSize(s * 0.18, s * 0.14)
-    tail:SetPoint("TOPLEFT", body, "BOTTOMLEFT", s * 0.08, 1)
-    parts.tail = tail
+    -- Drop shadow (offset 1px down-right)
+    p.sBod = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
+    p.sBod:SetSize(s * 0.72, s * 0.46)
+    p.sBod:SetPoint("CENTER", parent, "CENTER", 1, s * 0.04)
+    p.sBod:SetColorTexture(0, 0, 0, 0.45)
+    p.sTail = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
+    p.sTail:SetSize(s * 0.22, s * 0.17)
+    p.sTail:SetPoint("TOPLEFT", p.sBod, "BOTTOMLEFT", s * 0.12, 1)
+    p.sTail:SetColorTexture(0, 0, 0, 0.45)
+
+    -- Main body
+    p.body = parent:CreateTexture(nil, "ARTWORK", nil, 0)
+    p.body:SetSize(s * 0.70, s * 0.44)
+    p.body:SetPoint("CENTER", parent, "CENTER", 0, s * 0.06)
+
+    -- Tail
+    p.tail = parent:CreateTexture(nil, "ARTWORK", nil, 0)
+    p.tail:SetSize(s * 0.20, s * 0.15)
+    p.tail:SetPoint("TOPLEFT", p.body, "BOTTOMLEFT", s * 0.10, 1)
+
+    -- Top shine (subtle highlight strip)
+    p.shine = parent:CreateTexture(nil, "ARTWORK", nil, 1)
+    p.shine:SetSize(s * 0.60, s * 0.07)
+    p.shine:SetPoint("TOP", p.body, "TOP", 0, -1)
+    p.shine:SetColorTexture(1, 1, 1, 0.18)
 
     -- Three dots
-    parts.dots = {}
-    local dotSize = math.max(2, s * 0.09)
-    local spacing = s * 0.16
+    p.dots = {}
+    local dotSz = math.max(3, s * 0.11)
+    local space  = s * 0.19
     for i = -1, 1 do
-        local dot = parent:CreateTexture(nil, "ARTWORK", nil, 1)
-        dot:SetSize(dotSize, dotSize)
-        dot:SetPoint("CENTER", body, "CENTER", i * spacing, 0)
-        parts.dots[#parts.dots + 1] = dot
+        local d = parent:CreateTexture(nil, "ARTWORK", nil, 2)
+        d:SetSize(dotSz, dotSz)
+        d:SetPoint("CENTER", p.body, "CENTER", i * space, -0.5)
+        p.dots[#p.dots + 1] = d
     end
 
-    return parts
+    return p
 end
 
-local function SetBubbleColor(parts, bodyR, bodyG, bodyB, bodyA, dotR, dotG, dotB)
-    parts.body:SetColorTexture(bodyR, bodyG, bodyB, bodyA or 0.9)
-    parts.tail:SetColorTexture(bodyR, bodyG, bodyB, bodyA or 0.9)
-    for _, dot in ipairs(parts.dots) do
-        dot:SetColorTexture(dotR or 0.12, dotG or 0.12, dotB or 0.15, 1)
+local function ColorBubble(p, r, g, b, a, dr, dg, db)
+    p.body:SetColorTexture(r, g, b, a or 1)
+    p.tail:SetColorTexture(r, g, b, a or 1)
+    for _, d in ipairs(p.dots) do
+        d:SetColorTexture(dr or 0.06, dg or 0.08, db or 0.10, 1)
     end
 end
 
 ---------------------------------------------------------------------------
 -- WHISPER BLINK ANIMATION
 ---------------------------------------------------------------------------
-local blinkTicker = nil
-local blinkState  = false
+local blinkTicker, blinkState = nil, false
 
 function ns.StartBlink()
-    if blinkTicker then return end -- already blinking
+    if blinkTicker then return end
     ns._hasWhisper = true
     blinkState = false
     blinkTicker = C_Timer.NewTicker(0.5, function()
         if not btn then return end
         blinkState = not blinkState
         if blinkState then
-            btn.border:SetColorTexture(1.0, 0.6, 0.0, 1)
-            btn.bg:SetColorTexture(0.45, 0.28, 0.0, 0.92)
-            SetBubbleColor(btn.icon, 1.0, 0.85, 0.5, 0.95, 0.4, 0.25, 0.0)
+            ColorBubble(btn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
+            btn.bubble.shine:SetColorTexture(1, 1, 1, 0.25)
         else
             ns.UpdateButton()
         end
@@ -70,44 +88,30 @@ end
 
 function ns.StopBlink()
     ns._hasWhisper = false
-    if blinkTicker then
-        blinkTicker:Cancel()
-        blinkTicker = nil
-    end
+    if blinkTicker then blinkTicker:Cancel(); blinkTicker = nil end
     blinkState = false
     ns.UpdateButton()
 end
 
 ---------------------------------------------------------------------------
--- TOGGLE BUTTON
+-- TOGGLE BUTTON  (floating chat bubble — no square frame)
 ---------------------------------------------------------------------------
 function ns.InitButton()
     if btn then return end
 
     btn = CreateFrame("Button", "HideChatToggleButton", UIParent)
-    btn:SetSize(32, 32)
+    btn:SetSize(38, 32)
     btn:SetFrameStrata("HIGH")
     btn:SetClampedToScreen(true)
 
-    -- Colored border (1px around button)
-    local border = btn:CreateTexture(nil, "BACKGROUND", nil, -1)
-    border:SetPoint("TOPLEFT", -1, 1)
-    border:SetPoint("BOTTOMRIGHT", 1, -1)
-    btn.border = border
+    -- The bubble IS the icon — no opaque square behind it
+    btn.bubble = CreateBubble(btn, 36)
 
-    -- Dark inner background
-    local bg = btn:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0.08, 0.08, 0.10, 0.92)
-    btn.bg = bg
-
-    -- Hover highlight
-    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
-    highlight:SetAllPoints()
-    highlight:SetColorTexture(1, 1, 1, 0.08)
-
-    -- Chat bubble icon (custom drawn)
-    btn.icon = CreateBubbleIcon(btn, 30)
+    -- Hover highlight (covers the bubble area)
+    local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetSize(28, 20)
+    hl:SetPoint("CENTER", 0, 2)
+    hl:SetColorTexture(1, 1, 1, 0.08)
 
     ---------- position ---------------------------------------------------
     local pos = HideChatDB.buttonPos
@@ -119,45 +123,40 @@ function ns.InitButton()
     end
 
     ---------- dragging ---------------------------------------------------
-    btn:SetMovable(true)
-    btn:EnableMouse(true)
-    btn:RegisterForDrag("LeftButton")
-    btn:RegisterForClicks("AnyUp")
-
+    btn:SetMovable(true); btn:EnableMouse(true)
+    btn:RegisterForDrag("LeftButton"); btn:RegisterForClicks("AnyUp")
     btn:SetScript("OnDragStart", function(self)
         if not HideChatDB.lockButton then self:StartMoving() end
     end)
     btn:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        local point, _, relPoint, x, y = self:GetPoint()
-        HideChatDB.buttonPos = { point = point, relPoint = relPoint, x = x, y = y }
+        local pt, _, rel, x, y = self:GetPoint()
+        HideChatDB.buttonPos = { point = pt, relPoint = rel, x = x, y = y }
     end)
 
     ---------- clicks -----------------------------------------------------
-    btn:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then
+    btn:SetScript("OnClick", function(_, b)
+        if b == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
-        else
-            HideChat_Toggle()
-        end
+        else HideChat_Toggle() end
     end)
 
     ---------- tooltip ----------------------------------------------------
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("HideChat", 0, 1, 0)
+        GameTooltip:AddLine("HideChat", TEAL[1], TEAL[2], TEAL[3])
         GameTooltip:AddLine(" ")
         if ns.isHidden then
-            GameTooltip:AddLine("Status: Hidden", 0.9, 0.2, 0.2)
+            GameTooltip:AddLine("Status: Hidden", CORAL[1], CORAL[2], CORAL[3])
         else
-            GameTooltip:AddLine("Status: Visible", 0.2, 0.9, 0.2)
+            GameTooltip:AddLine("Status: Visible", TEAL[1], TEAL[2], TEAL[3])
         end
         if ns._hasWhisper then
-            GameTooltip:AddLine("New whisper!", 1.0, 0.6, 0.0)
+            GameTooltip:AddLine("New whisper!", AMBER[1], AMBER[2], AMBER[3])
         end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Left-click: Toggle chat", 1, 1, 1)
-        GameTooltip:AddLine("Right-click: Settings", 1, 1, 1)
+        GameTooltip:AddLine("Left-click: Toggle chat", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
         if not HideChatDB.lockButton then
             GameTooltip:AddLine("Drag: Move button", 0.5, 0.5, 0.5)
         end
@@ -168,30 +167,25 @@ function ns.InitButton()
     ---------- visibility -------------------------------------------------
     if not HideChatDB.showButton then btn:Hide() end
     ns.UpdateButton()
-
-    ---------- minimap button ---------------------------------------------
     ns.InitMinimapButton()
 end
 
 ---------------------------------------------------------------------------
--- Refresh toggle button visuals
+-- Refresh toggle button
 ---------------------------------------------------------------------------
 function ns.UpdateButton()
     if not btn then return end
-
     if HideChatDB.showButton then btn:Show() else btn:Hide(); return end
-
-    -- Skip colour update while blink is active (blink sets its own)
     if blinkState then return end
 
     if ns.isHidden then
-        btn.border:SetColorTexture(0.7, 0.15, 0.15, 1)
-        btn.bg:SetColorTexture(0.15, 0.06, 0.06, 0.92)
-        SetBubbleColor(btn.icon, 0.55, 0.55, 0.55, 0.7, 0.28, 0.28, 0.30)
+        -- Muted coral bubble
+        ColorBubble(btn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
+        btn.bubble.shine:SetColorTexture(1, 1, 1, 0.10)
     else
-        btn.border:SetColorTexture(0.1, 0.65, 0.1, 1)
-        btn.bg:SetColorTexture(0.06, 0.12, 0.06, 0.92)
-        SetBubbleColor(btn.icon, 1, 1, 1, 0.9, 0.12, 0.12, 0.15)
+        -- Bright teal bubble
+        ColorBubble(btn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+        btn.bubble.shine:SetColorTexture(1, 1, 1, 0.22)
     end
 end
 
@@ -208,11 +202,10 @@ end
 local function UpdateMinimapPosition()
     if not minimapBtn then return end
     local angle = math.rad(HideChatDB.minimapPos or 220)
-    local radius = 80
+    local r = 80
     minimapBtn:ClearAllPoints()
     minimapBtn:SetPoint("CENTER", Minimap, "CENTER",
-        math.cos(angle) * radius,
-        math.sin(angle) * radius)
+        math.cos(angle) * r, math.sin(angle) * r)
 end
 
 function ns.InitMinimapButton()
@@ -220,91 +213,74 @@ function ns.InitMinimapButton()
 
     minimapBtn = CreateFrame("Button", "HideChatMinimapButton", Minimap)
     minimapBtn:SetSize(32, 32)
-    minimapBtn:SetFrameStrata("MEDIUM")
-    minimapBtn:SetFrameLevel(8)
+    minimapBtn:SetFrameStrata("MEDIUM"); minimapBtn:SetFrameLevel(8)
 
-    -- Dark circular background
+    -- Dark circle bg
     local bg = minimapBtn:CreateTexture(nil, "BACKGROUND")
-    bg:SetSize(26, 26)
-    bg:SetPoint("CENTER")
-    bg:SetColorTexture(0.05, 0.05, 0.08, 0.85)
+    bg:SetSize(26, 26); bg:SetPoint("CENTER")
+    bg:SetColorTexture(SLATE[1], SLATE[2], SLATE[3], 0.92)
 
-    -- Chat bubble icon (smaller)
-    minimapBtn.icon = CreateBubbleIcon(minimapBtn, 24)
-    SetBubbleColor(minimapBtn.icon, 1, 1, 1, 0.9, 0.1, 0.1, 0.12)
+    -- Chat bubble icon
+    minimapBtn.bubble = CreateBubble(minimapBtn, 22)
+    ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
 
-    -- Minimap border ring (file data ID for stability)
-    local border = minimapBtn:CreateTexture(nil, "OVERLAY")
-    border:SetSize(54, 54)
-    border:SetPoint("CENTER")
-    pcall(border.SetTexture, border, 136430)
+    -- Standard minimap ring (safe file-data ID)
+    local ring = minimapBtn:CreateTexture(nil, "OVERLAY")
+    ring:SetSize(54, 54); ring:SetPoint("CENTER")
+    pcall(ring.SetTexture, ring, 136430)
 
-    -- Hover highlight
+    -- Hover
     local hl = minimapBtn:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetSize(24, 24)
-    hl:SetPoint("CENTER")
-    hl:SetColorTexture(1, 1, 1, 0.15)
+    hl:SetSize(24, 24); hl:SetPoint("CENTER")
+    hl:SetColorTexture(1, 1, 1, 0.12)
 
     ---------- position ---------------------------------------------------
     UpdateMinimapPosition()
 
     ---------- dragging ---------------------------------------------------
-    minimapBtn:RegisterForDrag("LeftButton")
-    minimapBtn:RegisterForClicks("AnyUp")
-    minimapBtn:SetScript("OnDragStart", function(self)
-        self._dragging = true
-    end)
-    minimapBtn:SetScript("OnDragStop", function(self)
-        self._dragging = false
-    end)
+    minimapBtn:RegisterForDrag("LeftButton"); minimapBtn:RegisterForClicks("AnyUp")
+    minimapBtn:SetScript("OnDragStart", function(self) self._drag = true end)
+    minimapBtn:SetScript("OnDragStop",  function(self) self._drag = false end)
     minimapBtn:SetScript("OnUpdate", function(self)
-        if not self._dragging then return end
+        if not self._drag then return end
         local mx, my = Minimap:GetCenter()
         local cx, cy = GetCursorPosition()
-        local scale  = UIParent:GetEffectiveScale()
-        cx, cy = cx / scale, cy / scale
-        local angle = math.deg(math.atan2(cy - my, cx - mx))
-        HideChatDB.minimapPos = angle
+        local s = UIParent:GetEffectiveScale()
+        HideChatDB.minimapPos = math.deg(math.atan2(cy/s - my, cx/s - mx))
         UpdateMinimapPosition()
     end)
 
     ---------- clicks -----------------------------------------------------
-    minimapBtn:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then
+    minimapBtn:SetScript("OnClick", function(_, b)
+        if b == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
-        else
-            HideChat_Toggle()
-        end
+        else HideChat_Toggle() end
     end)
 
     ---------- tooltip ----------------------------------------------------
     minimapBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("HideChat", 0, 1, 0)
+        GameTooltip:AddLine("HideChat", TEAL[1], TEAL[2], TEAL[3])
         GameTooltip:AddLine(" ")
         if ns.isHidden then
-            GameTooltip:AddLine("Status: Hidden", 0.9, 0.2, 0.2)
+            GameTooltip:AddLine("Status: Hidden", CORAL[1], CORAL[2], CORAL[3])
         else
-            GameTooltip:AddLine("Status: Visible", 0.2, 0.9, 0.2)
+            GameTooltip:AddLine("Status: Visible", TEAL[1], TEAL[2], TEAL[3])
         end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Left-click: Toggle", 1, 1, 1)
-        GameTooltip:AddLine("Right-click: Settings", 1, 1, 1)
+        GameTooltip:AddLine("Left-click: Toggle", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Drag: Reposition", 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
     minimapBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    ---------- visibility -------------------------------------------------
     ns.UpdateMinimap()
 end
 
 function ns.UpdateMinimap()
     if not minimapBtn then return end
     if HideChatDB.showMinimap then
-        minimapBtn:Show()
-        UpdateMinimapPosition()
-    else
-        minimapBtn:Hide()
-    end
+        minimapBtn:Show(); UpdateMinimapPosition()
+    else minimapBtn:Hide() end
 end
