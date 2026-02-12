@@ -7,3 +7,5 @@
 
 Bindings.xml
 HideChat.lua
+Button.lua
+Config.lua

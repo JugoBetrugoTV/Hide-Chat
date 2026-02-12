@@ -7,59 +7,110 @@ BINDING_HEADER_HIDECHAT = "HideChat"
 BINDING_NAME_HIDECHAT_TOGGLE = "Toggle Chat Visibility"
 
 ---------------------------------------------------------------------------
--- State
+-- Default saved-variable values
 ---------------------------------------------------------------------------
-local isHidden = false
-local savedParents = {}
+local defaults = {
+    hidden        = false,
+    showButton    = true,
+    lockButton    = false,
+    buttonPos     = nil,            -- set on first drag
+    combat        = false,          -- auto-hide in combat
+    combatRestore = true,           -- auto-show after combat
+    fade          = true,           -- smooth fade transition
+    fadeDuration  = 0.3,            -- seconds
+    alphaMode     = false,          -- compatibility mode for chat addons
+}
 
--- Invisible anchor – anything parented to this frame becomes invisible and
--- unclickable, even if WoW's own code calls :Show() on it.
+---------------------------------------------------------------------------
+-- Shared namespace state
+---------------------------------------------------------------------------
+ns.isHidden  = false
+ns.defaults  = defaults
+
+-- Invisible anchor – anything parented here is invisible & non-interactive
 local anchor = CreateFrame("Frame", "HideChatAnchor", UIParent)
 anchor:Hide()
 
----------------------------------------------------------------------------
--- Collect every chat-related UI element that should be hidden.
--- Nil-checks keep this compatible across Retail, Classic Era, TBC and MoP.
----------------------------------------------------------------------------
-local function GetChatElements()
-    local elements = {}
+local savedParents  = {}
+local alphaBackup   = {}
+local suppressAlpha = false
 
-    for i = 1, NUM_CHAT_WINDOWS do
-        local chatFrame = _G["ChatFrame" .. i]
-        if chatFrame then
-            elements[#elements + 1] = chatFrame
+---------------------------------------------------------------------------
+-- Third-party chat addon detection
+---------------------------------------------------------------------------
+local function GetThirdPartyFrames()
+    local frames = {}
+
+    -- Chattynator
+    if _G["ChattynatorFrame"] then
+        frames[#frames + 1] = _G["ChattynatorFrame"]
+    end
+    for i = 1, 20 do
+        local f = _G["ChattynatorTab" .. i]
+        if f then frames[#frames + 1] = f end
+    end
+
+    -- ElvUI chat panels
+    if _G["ElvUI"] then
+        for _, name in ipairs({
+            "LeftChatPanel", "RightChatPanel",
+            "LeftChatToggleButton", "RightChatToggleButton",
+            "LeftChatDataPanel", "RightChatDataPanel",
+        }) do
+            local f = _G[name]
+            if f then frames[#frames + 1] = f end
         end
     end
 
-    -- The dock manager holds the chat tabs
+    -- Glass (modern chat overlay)
+    if _G["GlassFrame"] then
+        frames[#frames + 1] = _G["GlassFrame"]
+    end
+
+    -- Prat-3.0 enhances the default ChatFrames in-place, so no extra
+    -- frames need to be collected – hiding ChatFrame1..N already covers it.
+
+    return frames
+end
+
+---------------------------------------------------------------------------
+-- Collect all chat UI elements (vanilla frames + third-party)
+---------------------------------------------------------------------------
+function ns.GetChatElements()
+    local elements = {}
+
+    for i = 1, NUM_CHAT_WINDOWS do
+        local cf = _G["ChatFrame" .. i]
+        if cf then elements[#elements + 1] = cf end
+    end
+
     if GeneralDockManager then
         elements[#elements + 1] = GeneralDockManager
     end
 
-    -- Buttons that sit next to the chat frame (may not exist in every version)
-    local extras = {
+    for _, name in ipairs({
         "ChatFrameMenuButton",
         "ChatFrameChannelButton",
         "QuickJoinToastButton",
         "ChatFrameToggleVoiceDeafenButton",
         "ChatFrameToggleVoiceMuteButton",
-    }
-    for _, name in ipairs(extras) do
-        local frame = _G[name]
-        if frame then
-            elements[#elements + 1] = frame
-        end
+    }) do
+        local f = _G[name]
+        if f then elements[#elements + 1] = f end
+    end
+
+    for _, f in ipairs(GetThirdPartyFrames()) do
+        elements[#elements + 1] = f
     end
 
     return elements
 end
 
 ---------------------------------------------------------------------------
--- Hide / Show helpers
+-- METHOD A – Reparent (default, most robust)
 ---------------------------------------------------------------------------
-local function DoHide()
-    local elements = GetChatElements()
-    for _, el in ipairs(elements) do
+local function ReparentHide()
+    for _, el in ipairs(ns.GetChatElements()) do
         if not savedParents[el] then
             savedParents[el] = el:GetParent()
         end
@@ -67,63 +118,172 @@ local function DoHide()
     end
 end
 
-local function DoShow()
+local function ReparentShow()
     for el, parent in pairs(savedParents) do
         el:SetParent(parent)
         el:Show()
     end
     savedParents = {}
-
-    -- Re-select the primary chat tab so the dock state is restored properly
     if FCF_SelectDockFrame and ChatFrame1 then
         FCF_SelectDockFrame(ChatFrame1)
     end
 end
 
 ---------------------------------------------------------------------------
--- Toggle (global – referenced from Bindings.xml)
+-- METHOD B – Alpha mode (better compat with chat addons that reparent)
 ---------------------------------------------------------------------------
-function HideChat_Toggle()
-    if isHidden then
-        DoShow()
-        isHidden = false
-        print("|cFF00FF00HideChat:|r Chat visible")
-    else
-        DoHide()
-        isHidden = true
-        -- Use the error frame so the message is visible even though chat is gone
-        UIErrorsFrame:AddMessage("|cFF00FF00HideChat:|r Chat hidden", 1, 1, 1, 1, 3)
-    end
-
-    if HideChatDB then
-        HideChatDB.hidden = isHidden
+local function AlphaHide()
+    for _, el in ipairs(ns.GetChatElements()) do
+        if not alphaBackup[el] then
+            alphaBackup[el] = { alpha = el:GetAlpha(), mouse = el:IsMouseEnabled() }
+            -- Hook SetAlpha so other addons can't accidentally reveal the frame
+            if not el._hc_hooked then
+                hooksecurefunc(el, "SetAlpha", function(self, a)
+                    if ns.isHidden and HideChatDB.alphaMode and not suppressAlpha then
+                        if alphaBackup[self] then alphaBackup[self].alpha = a end
+                        suppressAlpha = true
+                        self:SetAlpha(0)
+                        suppressAlpha = false
+                    end
+                end)
+                el._hc_hooked = true
+            end
+        end
+        suppressAlpha = true
+        el:SetAlpha(0)
+        suppressAlpha = false
+        el:EnableMouse(false)
     end
 end
 
----------------------------------------------------------------------------
--- Restore saved state on login
----------------------------------------------------------------------------
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("PLAYER_LOGIN")
-eventFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_LOGIN" then
-        HideChatDB = HideChatDB or { hidden = false }
+local function AlphaShow()
+    for el, info in pairs(alphaBackup) do
+        suppressAlpha = true
+        el:SetAlpha(info.alpha or 1)
+        suppressAlpha = false
+        el:EnableMouse(info.mouse ~= false)
+    end
+    alphaBackup = {}
+end
 
+---------------------------------------------------------------------------
+-- Fade helper (works with either hide method)
+---------------------------------------------------------------------------
+local function Fade(from, to, duration, onDone)
+    local elements = ns.GetChatElements()
+    local elapsed  = 0
+    local ticker
+    ticker = C_Timer.NewTicker(0.016, function()
+        elapsed = elapsed + 0.016
+        local p = math.min(elapsed / duration, 1)
+        local a = from + (to - from) * p
+        suppressAlpha = true
+        for _, el in ipairs(elements) do el:SetAlpha(a) end
+        suppressAlpha = false
+        if p >= 1 then
+            ticker:Cancel()
+            if onDone then onDone() end
+        end
+    end)
+end
+
+---------------------------------------------------------------------------
+-- Public hide / show API (used by button, keybind, slash command)
+---------------------------------------------------------------------------
+function ns.HideChat(silent)
+    if ns.isHidden then return end
+
+    local function commit()
+        if HideChatDB.alphaMode then AlphaHide() else ReparentHide() end
+        ns.isHidden = true
+        HideChatDB.hidden = true
+        if not silent then
+            UIErrorsFrame:AddMessage("|cFF00FF00HideChat:|r Chat hidden", 1, 1, 1, 1, 3)
+        end
+        if ns.UpdateButton then ns.UpdateButton() end
+    end
+
+    if HideChatDB.fade and HideChatDB.fadeDuration > 0 then
+        Fade(1, 0, HideChatDB.fadeDuration, commit)
+    else
+        commit()
+    end
+end
+
+function ns.ShowChat(silent)
+    if not ns.isHidden then return end
+
+    -- Restore frames first so they exist to be faded in
+    if HideChatDB.alphaMode then AlphaShow() else ReparentShow() end
+    ns.isHidden = false
+    HideChatDB.hidden = false
+
+    if HideChatDB.fade and HideChatDB.fadeDuration > 0 then
+        Fade(0, 1, HideChatDB.fadeDuration)
+    end
+
+    if not silent then
+        print("|cFF00FF00HideChat:|r Chat visible")
+    end
+    if ns.UpdateButton then ns.UpdateButton() end
+end
+
+function HideChat_Toggle()
+    if ns.isHidden then ns.ShowChat() else ns.HideChat() end
+end
+
+---------------------------------------------------------------------------
+-- Events: login + combat
+---------------------------------------------------------------------------
+local events = CreateFrame("Frame")
+events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("PLAYER_REGEN_DISABLED")  -- enter combat
+events:RegisterEvent("PLAYER_REGEN_ENABLED")   -- leave combat
+
+events:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_LOGIN" then
+        -- Merge defaults into saved vars
+        if not HideChatDB then HideChatDB = {} end
+        for k, v in pairs(defaults) do
+            if HideChatDB[k] == nil then HideChatDB[k] = v end
+        end
+
+        -- Restore previous hidden state
         if HideChatDB.hidden then
-            -- Short delay so every chat frame has finished initialising
             C_Timer.After(0.5, function()
-                DoHide()
-                isHidden = true
+                ns.HideChat(true)
             end)
+        end
+
+        -- Let button & config initialise
+        if ns.InitButton then ns.InitButton() end
+        if ns.InitConfig then ns.InitConfig() end
+
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        if HideChatDB.combat and not ns.isHidden then
+            ns._combatHid = true
+            ns.HideChat(true)
+        end
+
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        if ns._combatHid and HideChatDB.combatRestore then
+            ns._combatHid = false
+            ns.ShowChat(true)
         end
     end
 end)
 
 ---------------------------------------------------------------------------
--- Slash commands:  /hidechat  or  /hc
+-- Slash commands:  /hidechat | /hc         → toggle
+--                  /hidechat config        → settings
 ---------------------------------------------------------------------------
 SLASH_HIDECHAT1 = "/hidechat"
 SLASH_HIDECHAT2 = "/hc"
-SlashCmdList["HIDECHAT"] = function()
-    HideChat_Toggle()
+SlashCmdList["HIDECHAT"] = function(msg)
+    msg = strtrim(msg):lower()
+    if msg == "config" or msg == "options" or msg == "settings" then
+        if ns.ToggleConfig then ns.ToggleConfig() end
+    else
+        HideChat_Toggle()
+    end
 end
