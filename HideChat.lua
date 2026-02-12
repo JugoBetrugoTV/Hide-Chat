@@ -47,11 +47,27 @@ ns.mouseoverActive = false
 ns.defaults       = defaults
 ns.version        = "1.2.0"
 
--- Shorthand: set a solid-colour texture (12.0 requires ColorMixin)
+-- Shorthand: set a solid-colour texture
 -- Accepts (tex, r, g, b [,a])  OR  (tex, {r,g,b} [,a])
-function ns.sct(tex, r, g, b, a)
-    if type(r) == "table" then a, r, g, b = g, r[1], r[2], r[3] end
-    tex:SetColorTexture(CreateColor(r, g, b, a or 1))
+-- Auto-detects whether the client needs CreateColor (12.0+) or raw (r,g,b,a).
+do
+    local needsColorMixin  -- nil = unknown, detect on first call
+    function ns.sct(tex, r, g, b, a)
+        if type(r) == "table" then a, r, g, b = g, r[1], r[2], r[3] end
+        a = a or 1
+        if needsColorMixin == nil then
+            needsColorMixin = not pcall(tex.SetColorTexture, tex, r, g, b, a)
+            if needsColorMixin then
+                tex:SetColorTexture(CreateColor(r, g, b, a))
+            end
+            return
+        end
+        if needsColorMixin then
+            tex:SetColorTexture(CreateColor(r, g, b, a))
+        else
+            tex:SetColorTexture(r, g, b, a)
+        end
+    end
 end
 
 -- Invisible anchor – anything parented here is invisible & non-interactive
