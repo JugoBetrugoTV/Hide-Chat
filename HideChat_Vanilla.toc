@@ -2,11 +2,13 @@
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Classic Era)
 ## Author: JugoBetrugoTV
-## Version: 1.1.0
+## Version: 1.2.0
 ## IconTexture: Interface\GossipFrame\ChatBubbleGossipIcon
 ## SavedVariables: HideChatDB
+## SavedVariablesPerCharacter: HideChatCharDB
 
 Bindings.xml
 HideChat.lua
+Features.lua
 Button.lua
 Config.lua

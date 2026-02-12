@@ -2,14 +2,16 @@
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Midnight / Retail)
 ## Author: JugoBetrugoTV
-## Version: 1.1.0
+## Version: 1.2.0
 ## IconTexture: Interface\GossipFrame\ChatBubbleGossipIcon
 ## AddonCompartmentFunc: HideChat_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: HideChat_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: HideChat_OnAddonCompartmentLeave
 ## SavedVariables: HideChatDB
+## SavedVariablesPerCharacter: HideChatCharDB
 
 Bindings.xml
 HideChat.lua
+Features.lua
 Button.lua
 Config.lua
