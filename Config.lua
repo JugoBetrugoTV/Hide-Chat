@@ -18,19 +18,20 @@ local C = {
     btnBrd  = { 0.20, 0.22, 0.28 },   -- button border
 }
 
-local function rgb(t) return t[1], t[2], t[3] end
-local sct = ns.sct
+local sct = ns.sct  -- accepts (tex, r,g,b [,a]) or (tex, {r,g,b} [,a])
 
 ---------------------------------------------------------------------------
--- Draw helpers
+-- Draw helpers  (accept colour table or separate r,g,b)
 ---------------------------------------------------------------------------
 local function HLine(parent, layer, sub, h, r, g, b, a)
+    if type(r) == "table" then a, r, g, b = g, r[1], r[2], r[3] end
     local t = parent:CreateTexture(nil, layer or "ARTWORK", nil, sub or 0)
     t:SetHeight(h or 1); sct(t, r, g, b, a)
     return t
 end
 
 local function BoxBorder(f, r, g, b, a)
+    if type(r) == "table" then a, r, g, b = g, r[1], r[2], r[3] end
     local function E(p1, p2)
         local t = f:CreateTexture(nil, "BORDER")
         sct(t, r, g, b, a or 0.6)
@@ -55,14 +56,14 @@ local function Card(parent, title, x, y, w, h)
     card:SetSize(w, h); card:SetPoint("TOPLEFT", x, y)
 
     local bg = card:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints(); sct(bg, rgb(C.cardBg), 0.95)
+    bg:SetAllPoints(); sct(bg, C.cardBg, 0.95)
 
-    BoxBorder(card, rgb(C.border), 0.45)
+    BoxBorder(card, C.border, 0.45)
 
     -- Teal accent at top
     local acc = card:CreateTexture(nil, "BORDER", nil, 1)
     acc:SetHeight(2); acc:SetPoint("TOPLEFT"); acc:SetPoint("TOPRIGHT")
-    sct(acc, rgb(C.accent), 0.65)
+    sct(acc, C.accent, 0.65)
 
     if title then
         local fs = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -157,10 +158,10 @@ local function Slider(parent, label, x, y, width, lo, hi, step, key, fmt)
     -- Fill (teal)
     local fill = sl:CreateTexture(nil, "BACKGROUND", nil, 1)
     fill:SetPoint("TOPLEFT", track, "TOPLEFT"); fill:SetHeight(6)
-    sct(fill, rgb(C.accent), 0.50); wrap._fill = fill
+    sct(fill, C.accent, 0.50); wrap._fill = fill
     -- Thumb
     local th = sl:CreateTexture(nil, "OVERLAY")
-    th:SetSize(10, 16); sct(th, rgb(C.accent), 0.9)
+    th:SetSize(10, 16); sct(th, C.accent, 0.9)
     sl:SetThumbTexture(th); wrap._thumb = th
     sl:SetScript("OnValueChanged", function(self, val)
         val = math.floor(val / step + 0.5) * step
@@ -175,7 +176,7 @@ local function Slider(parent, label, x, y, width, lo, hi, step, key, fmt)
         if on then
             self.slider:EnableMouse(true)
             self.title:SetFontObject("GameFontHighlight"); self.value:SetFontObject("GameFontHighlight")
-            sct(self._thumb, rgb(C.accent), 0.9)
+            sct(self._thumb, C.accent, 0.9)
             sct(self._track, 0.08, 0.09, 0.12, 1)
         else
             self.slider:EnableMouse(false)
@@ -193,13 +194,13 @@ local function Btn(parent, label, x, y, w, onClick)
     -- Border
     local bd = b:CreateTexture(nil, "BACKGROUND", nil, -1)
     bd:SetPoint("TOPLEFT", -1, 1); bd:SetPoint("BOTTOMRIGHT", 1, -1)
-    sct(bd, rgb(C.btnBrd), 0.5)
+    sct(bd, C.btnBrd, 0.5)
     -- Bg
     local bg = b:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints()
-    sct(bg, rgb(C.btnBg), 0.9)
+    sct(bg, C.btnBg, 0.9)
     -- Hover
     local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints()
-    sct(hl, rgb(C.accent), 0.08)
+    sct(hl, C.accent, 0.08)
     -- Label
     local t = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("CENTER"); t:SetText(label); b.label = t
@@ -270,10 +271,10 @@ function ns.InitConfig()
 
     -- Solid dark background (no WoW dialog textures)
     local bg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
-    bg:SetAllPoints(); sct(bg, rgb(C.bg), 0.98)
+    bg:SetAllPoints(); sct(bg, C.bg, 0.98)
 
     -- Frame border
-    BoxBorder(f, rgb(C.border), 0.55)
+    BoxBorder(f, C.border, 0.55)
 
     -- ==================== TITLE BAR ====================
     local titleBg = f:CreateTexture(nil, "ARTWORK")
@@ -281,7 +282,7 @@ function ns.InitConfig()
     sct(titleBg, 0.04, 0.05, 0.07, 1)
 
     -- Teal accent line
-    local accent = HLine(f, "ARTWORK", 1, 2, rgb(C.accent), 0.75)
+    local accent = HLine(f, "ARTWORK", 1, 2, C.accent, 0.75)
     accent:SetPoint("TOPLEFT", titleBg, "BOTTOMLEFT")
     accent:SetPoint("TOPRIGHT", titleBg, "BOTTOMRIGHT")
 
@@ -302,9 +303,9 @@ function ns.InitConfig()
     local closeBtn = CreateFrame("Button", nil, f)
     closeBtn:SetSize(26, 26); closeBtn:SetPoint("TOPRIGHT", -8, -8)
     local cBg = closeBtn:CreateTexture(nil, "BACKGROUND")
-    cBg:SetAllPoints(); sct(cBg, rgb(C.danger), 0.15)
+    cBg:SetAllPoints(); sct(cBg, C.danger, 0.15)
     local cHl = closeBtn:CreateTexture(nil, "HIGHLIGHT")
-    cHl:SetAllPoints(); sct(cHl, rgb(C.danger), 0.35)
+    cHl:SetAllPoints(); sct(cHl, C.danger, 0.35)
     local cTxt = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     cTxt:SetPoint("CENTER", 0, 0); cTxt:SetText("|cFFCC6666x|r")
     closeBtn:SetScript("OnClick", function() ns.ToggleConfig() end)

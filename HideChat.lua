@@ -47,9 +47,11 @@ ns.mouseoverActive = false
 ns.defaults       = defaults
 ns.version        = "1.2.0"
 
--- Shorthand: set a solid-colour texture
+-- Shorthand: set a solid-colour texture (12.0 requires ColorMixin)
+-- Accepts (tex, r, g, b [,a])  OR  (tex, {r,g,b} [,a])
 function ns.sct(tex, r, g, b, a)
-    tex:SetColorTexture(r, g, b, a or 1)
+    if type(r) == "table" then a, r, g, b = g, r[1], r[2], r[3] end
+    tex:SetColorTexture(CreateColor(r, g, b, a or 1))
 end
 
 -- Invisible anchor – anything parented here is invisible & non-interactive
