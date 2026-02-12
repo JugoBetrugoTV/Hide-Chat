@@ -193,6 +193,11 @@ function ns.UpdateButton()
         ColorBubble(btn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
         sct(btn.bubble.shine, 1, 1, 1, 0.22)
     end
+
+    -- Refresh tooltip live if currently hovering
+    if GameTooltip:IsOwned(btn) then
+        btn:GetScript("OnEnter")(btn)
+    end
 end
 
 function ns.ResetButtonPos()
@@ -295,6 +300,10 @@ function ns.UpdateMinimap()
             ColorBubble(minimapBtn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
         else
             ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+        end
+        -- Refresh tooltip live if currently hovering
+        if GameTooltip:IsOwned(minimapBtn) then
+            minimapBtn:GetScript("OnEnter")(minimapBtn)
         end
     else minimapBtn:Hide() end
 end

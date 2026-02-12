@@ -81,19 +81,38 @@ local suppressAlpha = false
 local activeFade    = nil
 
 ---------------------------------------------------------------------------
--- Custom status notification (avoids UIErrorsFrame duplicate suppression)
+-- Custom status notification (manual fade – immune to duplicate suppression)
 ---------------------------------------------------------------------------
-local notifFrame = CreateFrame("MessageFrame", nil, UIParent)
+local notifFrame = CreateFrame("Frame", nil, UIParent)
 notifFrame:SetSize(500, 30)
 notifFrame:SetPoint("TOP", UIParent, "TOP", 0, -100)
-notifFrame:SetFontObject(GameFontNormalLarge)
-notifFrame:SetInsertMode("TOP")
-notifFrame:SetFadeDuration(1.5)
-notifFrame:SetTimeVisible(2.0)
+notifFrame:SetFrameStrata("HIGH")
+local notifText = notifFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+notifText:SetPoint("CENTER")
+notifFrame:Hide()
+
+local notifTimer
 
 local function ShowNotification(text)
-    notifFrame:Clear()
-    notifFrame:AddMessage(text, 1, 1, 1)
+    notifText:SetText(text)
+    notifFrame:SetAlpha(1)
+    notifFrame:Show()
+    notifFrame:SetScript("OnUpdate", nil)
+    if notifTimer then notifTimer:Cancel() end
+    notifTimer = C_Timer.NewTimer(1.5, function()
+        notifTimer = nil
+        local fade = 0
+        notifFrame:SetScript("OnUpdate", function(self, dt)
+            fade = fade + dt
+            local a = 1 - (fade / 1.0)
+            if a <= 0 then
+                self:Hide()
+                self:SetScript("OnUpdate", nil)
+            else
+                self:SetAlpha(a)
+            end
+        end)
+    end)
 end
 
 ---------------------------------------------------------------------------
