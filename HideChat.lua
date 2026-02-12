@@ -47,9 +47,9 @@ ns.mouseoverActive = false
 ns.defaults       = defaults
 ns.version        = "1.2.0"
 
--- WoW 12.0 compat: SetColorTexture now requires a ColorMixin
+-- Shorthand: set a solid-colour texture
 function ns.sct(tex, r, g, b, a)
-    tex:SetColorTexture(CreateColor(r, g, b, a or 1))
+    tex:SetColorTexture(r, g, b, a or 1)
 end
 
 -- Invisible anchor – anything parented here is invisible & non-interactive
