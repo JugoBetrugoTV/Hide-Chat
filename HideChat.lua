@@ -361,7 +361,7 @@ function ns.ShowChat(silent)
     end
 
     if not silent then
-        print("|cFF00FF00HideChat:|r Chat visible")
+        UIErrorsFrame:AddMessage("|cFF00FF00HideChat:|r Chat visible", 1, 1, 1, 1, 3)
     end
     if ns.UpdateButton then ns.UpdateButton() end
     if ns.StopBlink  then ns.StopBlink() end
