@@ -76,23 +76,28 @@ end
 ---------------------------------------------------------------------------
 -- Widgets
 ---------------------------------------------------------------------------
-local function SafeTex(w, m, p, ...)
-    pcall(w[m], w, p, ...)
-end
-
 local function Checkbox(parent, label, x, y, key, onToggle)
     local cb = CreateFrame("CheckButton", nil, parent)
     cb:SetSize(22, 22); cb:SetPoint("TOPLEFT", x, y)
-    SafeTex(cb, "SetNormalTexture",    "Interface\\Buttons\\UI-CheckBox-Up")
-    SafeTex(cb, "SetPushedTexture",    "Interface\\Buttons\\UI-CheckBox-Down")
-    SafeTex(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    SafeTex(cb, "SetCheckedTexture",   "Interface\\Buttons\\UI-CheckBox-Check")
-    -- Fallback: teal check mark text
-    local mark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    mark:SetPoint("CENTER", 0, 0); mark:SetText("")
+    -- Dark box with border (custom themed, no WoW checkbox textures)
+    local brd = cb:CreateTexture(nil, "BACKGROUND", nil, -1)
+    brd:SetSize(18, 18); brd:SetPoint("LEFT", 2, 0)
+    sct(brd, C.border, 0.7)
+    local box = cb:CreateTexture(nil, "BACKGROUND")
+    box:SetSize(16, 16); box:SetPoint("CENTER", brd)
+    sct(box, 0.06, 0.07, 0.10, 1)
+    -- Teal fill when checked
+    local mark = cb:CreateTexture(nil, "ARTWORK")
+    mark:SetSize(10, 10); mark:SetPoint("CENTER", box)
+    sct(mark, C.accent, 0.9)
+    mark:Hide()
     cb._mark = mark
+    -- Hover highlight
+    local hl = cb:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetSize(16, 16); hl:SetPoint("CENTER", box)
+    sct(hl, 1, 1, 1, 0.06)
     local function syncMark(self)
-        self._mark:SetText(self:GetChecked() and "|cFF2DD4BF" .. "✓" .. "|r" or "")
+        if self:GetChecked() then self._mark:Show() else self._mark:Hide() end
     end
     cb:SetScript("OnShow", syncMark)
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -113,15 +118,23 @@ end
 local function InstanceCheckbox(parent, label, x, y, subKey)
     local cb = CreateFrame("CheckButton", nil, parent)
     cb:SetSize(18, 18); cb:SetPoint("TOPLEFT", x, y)
-    SafeTex(cb, "SetNormalTexture",    "Interface\\Buttons\\UI-CheckBox-Up")
-    SafeTex(cb, "SetPushedTexture",    "Interface\\Buttons\\UI-CheckBox-Down")
-    SafeTex(cb, "SetHighlightTexture", "Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
-    SafeTex(cb, "SetCheckedTexture",   "Interface\\Buttons\\UI-CheckBox-Check")
-    local mark = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    mark:SetPoint("CENTER", 0, 0); mark:SetText("")
+    -- Custom themed (same as Checkbox but smaller)
+    local brd = cb:CreateTexture(nil, "BACKGROUND", nil, -1)
+    brd:SetSize(15, 15); brd:SetPoint("LEFT", 1, 0)
+    sct(brd, C.border, 0.7)
+    local box = cb:CreateTexture(nil, "BACKGROUND")
+    box:SetSize(13, 13); box:SetPoint("CENTER", brd)
+    sct(box, 0.06, 0.07, 0.10, 1)
+    local mark = cb:CreateTexture(nil, "ARTWORK")
+    mark:SetSize(8, 8); mark:SetPoint("CENTER", box)
+    sct(mark, C.accent, 0.9)
+    mark:Hide()
     cb._mark = mark
+    local hl = cb:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetSize(13, 13); hl:SetPoint("CENTER", box)
+    sct(hl, 1, 1, 1, 0.06)
     local function syncMark(self)
-        self._mark:SetText(self:GetChecked() and "|cFF2DD4BF" .. "✓" .. "|r" or "")
+        if self:GetChecked() then self._mark:Show() else self._mark:Hide() end
     end
     cb:SetScript("OnShow", syncMark)
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -268,6 +281,8 @@ function ns.InitConfig()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    -- Save profile when hidden (covers Escape, close button, ToggleConfig)
+    f:SetScript("OnHide", function() ns.SaveCurrentProfile() end)
 
     -- Solid dark background (no WoW dialog textures)
     local bg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
@@ -524,11 +539,15 @@ local function Refresh()
     if not frame or not checkboxes then return end
     for _, cb in pairs(checkboxes) do
         cb:SetChecked(HideChatDB[cb._key])
-        if cb._mark then cb._mark:SetText(cb:GetChecked() and "|cFF2DD4BF✓|r" or "") end
+        if cb._mark then
+            if cb:GetChecked() then cb._mark:Show() else cb._mark:Hide() end
+        end
     end
     for _, cb in ipairs(widgets.instChecks) do
         cb:SetChecked(HideChatDB.instanceTypes[cb._subKey])
-        if cb._mark then cb._mark:SetText(cb:GetChecked() and "|cFF2DD4BF✓|r" or "") end
+        if cb._mark then
+            if cb:GetChecked() then cb._mark:Show() else cb._mark:Hide() end
+        end
     end
     if widgets.fadeSlider  then widgets.fadeSlider.slider:SetValue(HideChatDB.fadeDuration) end
     if widgets.opacSlider  then widgets.opacSlider.slider:SetValue(HideChatDB.opacity or 0) end
@@ -544,6 +563,6 @@ end
 function ns.ToggleConfig()
     if not frame then ns.InitConfig() end
     if not frame then return end   -- InitConfig failed, bail out
-    if frame:IsShown() then ns.SaveCurrentProfile(); frame:Hide()
+    if frame:IsShown() then frame:Hide()   -- OnHide saves profile
     else Refresh(); frame:Show() end
 end
