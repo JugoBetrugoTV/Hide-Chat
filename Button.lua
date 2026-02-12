@@ -4,6 +4,48 @@ local btn         -- toggle button
 local minimapBtn  -- minimap button
 
 ---------------------------------------------------------------------------
+-- Helper: draw a chat-bubble icon from layered textures
+-- Returns table of texture refs for recoloring later
+---------------------------------------------------------------------------
+local function CreateBubbleIcon(parent, size)
+    local s = size or 30
+    local parts = {}
+
+    -- Bubble body
+    local body = parent:CreateTexture(nil, "ARTWORK")
+    body:SetSize(s * 0.60, s * 0.38)
+    body:SetPoint("CENTER", parent, "CENTER", 0, s * 0.06)
+    parts.body = body
+
+    -- Bubble tail
+    local tail = parent:CreateTexture(nil, "ARTWORK")
+    tail:SetSize(s * 0.18, s * 0.14)
+    tail:SetPoint("TOPLEFT", body, "BOTTOMLEFT", s * 0.08, 1)
+    parts.tail = tail
+
+    -- Three dots
+    parts.dots = {}
+    local dotSize = math.max(2, s * 0.09)
+    local spacing = s * 0.16
+    for i = -1, 1 do
+        local dot = parent:CreateTexture(nil, "ARTWORK", nil, 1)
+        dot:SetSize(dotSize, dotSize)
+        dot:SetPoint("CENTER", body, "CENTER", i * spacing, 0)
+        parts.dots[#parts.dots + 1] = dot
+    end
+
+    return parts
+end
+
+local function SetBubbleColor(parts, bodyR, bodyG, bodyB, bodyA, dotR, dotG, dotB)
+    parts.body:SetColorTexture(bodyR, bodyG, bodyB, bodyA or 0.9)
+    parts.tail:SetColorTexture(bodyR, bodyG, bodyB, bodyA or 0.9)
+    for _, dot in ipairs(parts.dots) do
+        dot:SetColorTexture(dotR or 0.12, dotG or 0.12, dotB or 0.15, 1)
+    end
+end
+
+---------------------------------------------------------------------------
 -- WHISPER BLINK ANIMATION
 ---------------------------------------------------------------------------
 local blinkTicker = nil
@@ -17,10 +59,11 @@ function ns.StartBlink()
         if not btn then return end
         blinkState = not blinkState
         if blinkState then
-            btn.bg:SetColorTexture(0.8, 0.5, 0.0, 0.90)     -- orange flash
-            btn.overlay:SetColorTexture(1.0, 0.6, 0.0, 1)
+            btn.border:SetColorTexture(1.0, 0.6, 0.0, 1)
+            btn.bg:SetColorTexture(0.45, 0.28, 0.0, 0.92)
+            SetBubbleColor(btn.icon, 1.0, 0.85, 0.5, 0.95, 0.4, 0.25, 0.0)
         else
-            ns.UpdateButton()   -- restore normal state colour
+            ns.UpdateButton()
         end
     end)
 end
@@ -42,33 +85,29 @@ function ns.InitButton()
     if btn then return end
 
     btn = CreateFrame("Button", "HideChatToggleButton", UIParent)
-    btn:SetSize(30, 30)
+    btn:SetSize(32, 32)
     btn:SetFrameStrata("HIGH")
     btn:SetClampedToScreen(true)
 
-    -- Dark background
+    -- Colored border (1px around button)
+    local border = btn:CreateTexture(nil, "BACKGROUND", nil, -1)
+    border:SetPoint("TOPLEFT", -1, 1)
+    border:SetPoint("BOTTOMRIGHT", 1, -1)
+    btn.border = border
+
+    -- Dark inner background
     local bg = btn:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetColorTexture(0.12, 0.12, 0.12, 0.85)
+    bg:SetColorTexture(0.08, 0.08, 0.10, 0.92)
     btn.bg = bg
 
     -- Hover highlight
     local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints()
-    highlight:SetColorTexture(1, 1, 1, 0.10)
+    highlight:SetColorTexture(1, 1, 1, 0.08)
 
-    -- Chat icon label (text-based, works on all WoW versions)
-    local label = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    label:SetPoint("CENTER", 0, 0)
-    label:SetText("HC")
-    label:SetTextColor(1, 1, 1)
-    btn.label = label
-
-    -- State colour dot
-    local overlay = btn:CreateTexture(nil, "ARTWORK", nil, 1)
-    overlay:SetSize(8, 8)
-    overlay:SetPoint("BOTTOMRIGHT", -3, 3)
-    btn.overlay = overlay
+    -- Chat bubble icon (custom drawn)
+    btn.icon = CreateBubbleIcon(btn, 30)
 
     ---------- position ---------------------------------------------------
     local pos = HideChatDB.buttonPos
@@ -146,13 +185,13 @@ function ns.UpdateButton()
     if blinkState then return end
 
     if ns.isHidden then
-        btn.bg:SetColorTexture(0.45, 0.08, 0.08, 0.85)
-        btn.overlay:SetColorTexture(0.9, 0.2, 0.2, 1)
-        btn.label:SetTextColor(0.7, 0.7, 0.7)
+        btn.border:SetColorTexture(0.7, 0.15, 0.15, 1)
+        btn.bg:SetColorTexture(0.15, 0.06, 0.06, 0.92)
+        SetBubbleColor(btn.icon, 0.55, 0.55, 0.55, 0.7, 0.28, 0.28, 0.30)
     else
-        btn.bg:SetColorTexture(0.08, 0.30, 0.08, 0.85)
-        btn.overlay:SetColorTexture(0.2, 0.9, 0.2, 1)
-        btn.label:SetTextColor(1, 1, 1)
+        btn.border:SetColorTexture(0.1, 0.65, 0.1, 1)
+        btn.bg:SetColorTexture(0.06, 0.12, 0.06, 0.92)
+        SetBubbleColor(btn.icon, 1, 1, 1, 0.9, 0.12, 0.12, 0.15)
     end
 end
 
@@ -184,24 +223,21 @@ function ns.InitMinimapButton()
     minimapBtn:SetFrameStrata("MEDIUM")
     minimapBtn:SetFrameLevel(8)
 
-    -- Background circle
+    -- Dark circular background
     local bg = minimapBtn:CreateTexture(nil, "BACKGROUND")
-    bg:SetSize(24, 24)
+    bg:SetSize(26, 26)
     bg:SetPoint("CENTER")
-    bg:SetColorTexture(0, 0, 0, 0.6)
+    bg:SetColorTexture(0.05, 0.05, 0.08, 0.85)
 
-    -- Icon label (text-based, works on all WoW versions)
-    local label = minimapBtn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    label:SetPoint("CENTER", 0, 0)
-    label:SetText("HC")
-    label:SetTextColor(1, 1, 1)
-    minimapBtn.label = label
+    -- Chat bubble icon (smaller)
+    minimapBtn.icon = CreateBubbleIcon(minimapBtn, 24)
+    SetBubbleColor(minimapBtn.icon, 1, 1, 1, 0.9, 0.1, 0.1, 0.12)
 
-    -- Standard minimap border ring
+    -- Minimap border ring (file data ID for stability)
     local border = minimapBtn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
     border:SetPoint("CENTER")
-    border:SetTexture(136430)  -- MiniMap-TrackingBorder file data ID
+    pcall(border.SetTexture, border, 136430)
 
     -- Hover highlight
     local hl = minimapBtn:CreateTexture(nil, "HIGHLIGHT")
