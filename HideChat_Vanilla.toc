@@ -3,7 +3,7 @@
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Classic Era)
 ## Author: JugoBetrugoTV
 ## Version: 1.2.0
-## IconTexture: Interface\GossipFrame\ChatBubbleGossipIcon
+## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB
 

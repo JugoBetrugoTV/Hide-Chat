@@ -57,12 +57,12 @@ function ns.InitButton()
     highlight:SetAllPoints()
     highlight:SetColorTexture(1, 1, 1, 0.10)
 
-    -- Chat bubble icon
-    local icon = btn:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(20, 20)
-    icon:SetPoint("CENTER")
-    icon:SetTexture("Interface\\GossipFrame\\ChatBubbleGossipIcon")
-    btn.icon = icon
+    -- Chat icon label (text-based, works on all WoW versions)
+    local label = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    label:SetPoint("CENTER", 0, 0)
+    label:SetText("HC")
+    label:SetTextColor(1, 1, 1)
+    btn.label = label
 
     -- State colour dot
     local overlay = btn:CreateTexture(nil, "ARTWORK", nil, 1)
@@ -148,13 +148,11 @@ function ns.UpdateButton()
     if ns.isHidden then
         btn.bg:SetColorTexture(0.45, 0.08, 0.08, 0.85)
         btn.overlay:SetColorTexture(0.9, 0.2, 0.2, 1)
-        btn.icon:SetDesaturated(true)
-        btn.icon:SetVertexColor(0.7, 0.7, 0.7)
+        btn.label:SetTextColor(0.7, 0.7, 0.7)
     else
         btn.bg:SetColorTexture(0.08, 0.30, 0.08, 0.85)
         btn.overlay:SetColorTexture(0.2, 0.9, 0.2, 1)
-        btn.icon:SetDesaturated(false)
-        btn.icon:SetVertexColor(1, 1, 1)
+        btn.label:SetTextColor(1, 1, 1)
     end
 end
 
@@ -192,18 +190,18 @@ function ns.InitMinimapButton()
     bg:SetPoint("CENTER")
     bg:SetColorTexture(0, 0, 0, 0.6)
 
-    -- Icon
-    local icon = minimapBtn:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(18, 18)
-    icon:SetPoint("CENTER")
-    icon:SetTexture("Interface\\GossipFrame\\ChatBubbleGossipIcon")
-    minimapBtn.icon = icon
+    -- Icon label (text-based, works on all WoW versions)
+    local label = minimapBtn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    label:SetPoint("CENTER", 0, 0)
+    label:SetText("HC")
+    label:SetTextColor(1, 1, 1)
+    minimapBtn.label = label
 
     -- Standard minimap border ring
     local border = minimapBtn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
     border:SetPoint("CENTER")
-    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetTexture(136430)  -- MiniMap-TrackingBorder file data ID
 
     -- Hover highlight
     local hl = minimapBtn:CreateTexture(nil, "HIGHLIGHT")
