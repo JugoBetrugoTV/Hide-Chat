@@ -7,7 +7,6 @@
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB
 
-Bindings.xml
 HideChat.lua
 Features.lua
 Button.lua
