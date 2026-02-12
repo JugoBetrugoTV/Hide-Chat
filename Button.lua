@@ -14,23 +14,26 @@ local SLATE   = { 0.10, 0.12, 0.16 }   -- dark bg
 ---------------------------------------------------------------------------
 -- Helper: create a floating chat-bubble icon with shadow + shine
 ---------------------------------------------------------------------------
-local function CreateBubble(parent, s)
+local function CreateBubble(parent, s, compact)
     local p = {}
+    local yOff  = compact and 0 or (s * 0.06)   -- vertical lift
+    local shOff = compact and 0.5 or 1           -- shadow x-shift
+    local shAlp = compact and 0.30 or 0.45       -- shadow alpha
 
-    -- Drop shadow (offset 1px down-right)
+    -- Drop shadow
     p.sBod = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
     p.sBod:SetSize(s * 0.72, s * 0.46)
-    p.sBod:SetPoint("CENTER", parent, "CENTER", 1, s * 0.04)
-    p.sBod:SetColorTexture(0, 0, 0, 0.45)
+    p.sBod:SetPoint("CENTER", parent, "CENTER", shOff, yOff - 0.5)
+    p.sBod:SetColorTexture(0, 0, 0, shAlp)
     p.sTail = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
     p.sTail:SetSize(s * 0.22, s * 0.17)
     p.sTail:SetPoint("TOPLEFT", p.sBod, "BOTTOMLEFT", s * 0.12, 1)
-    p.sTail:SetColorTexture(0, 0, 0, 0.45)
+    p.sTail:SetColorTexture(0, 0, 0, shAlp)
 
     -- Main body
     p.body = parent:CreateTexture(nil, "ARTWORK", nil, 0)
     p.body:SetSize(s * 0.70, s * 0.44)
-    p.body:SetPoint("CENTER", parent, "CENTER", 0, s * 0.06)
+    p.body:SetPoint("CENTER", parent, "CENTER", 0, yOff)
 
     -- Tail
     p.tail = parent:CreateTexture(nil, "ARTWORK", nil, 0)
@@ -41,7 +44,7 @@ local function CreateBubble(parent, s)
     p.shine = parent:CreateTexture(nil, "ARTWORK", nil, 1)
     p.shine:SetSize(s * 0.60, s * 0.07)
     p.shine:SetPoint("TOP", p.body, "TOP", 0, -1)
-    p.shine:SetColorTexture(1, 1, 1, 0.18)
+    p.shine:SetColorTexture(1, 1, 1, compact and 0.12 or 0.18)
 
     -- Three dots
     p.dots = {}
@@ -220,8 +223,8 @@ function ns.InitMinimapButton()
     bg:SetSize(26, 26); bg:SetPoint("CENTER")
     bg:SetColorTexture(SLATE[1], SLATE[2], SLATE[3], 0.92)
 
-    -- Chat bubble icon
-    minimapBtn.bubble = CreateBubble(minimapBtn, 22)
+    -- Chat bubble icon (compact = centered, no big offsets)
+    minimapBtn.bubble = CreateBubble(minimapBtn, 22, true)
     ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
 
     -- Standard minimap ring (safe file-data ID)

@@ -251,6 +251,11 @@ StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
 function ns.InitConfig()
     if frame then return end
 
+    -- Init tables BEFORE frame creation so a partial failure
+    -- doesn't leave them nil while frame is already set.
+    checkboxes = {}
+    widgets    = { instChecks = {} }
+
     local FW, FH = 400, 600
     local CW = FW - 52
 
@@ -315,7 +320,6 @@ function ns.InitConfig()
     scroll:SetScrollChild(content)
 
     -- ==================== CONTENT ====================
-    checkboxes = {}; widgets = { instChecks = {} }
     local PAD = 8   -- card inner padding
     local Y = 0
 
@@ -479,7 +483,7 @@ end
 -- Refresh widgets to match HideChatDB
 ---------------------------------------------------------------------------
 local function Refresh()
-    if not frame then return end
+    if not frame or not checkboxes then return end
     for _, cb in pairs(checkboxes) do
         cb:SetChecked(HideChatDB[cb._key])
         if cb._mark then cb._mark:SetText(cb:GetChecked() and "|cFF2DD4BF✓|r" or "") end
