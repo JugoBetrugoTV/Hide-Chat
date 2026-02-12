@@ -315,6 +315,19 @@ function ns.InitConfig()
     ver:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
     ver:SetText("|cFF555555v" .. (ns.version or "?") .. "|r")
 
+    -- Live status indicator (updates while config panel is open)
+    local statusDot = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    statusDot:SetPoint("TOPRIGHT", -42, -16)
+    widgets.statusDot = statusDot
+    f:SetScript("OnUpdate", function()
+        if not widgets.statusDot then return end
+        if ns.isHidden then
+            widgets.statusDot:SetText("|cFFE06666\226\151\143  Hidden|r")
+        else
+            widgets.statusDot:SetText("|cFF2DD4BF\226\151\143  Visible|r")
+        end
+    end)
+
     -- Close button
     local closeBtn = CreateFrame("Button", nil, f)
     closeBtn:SetSize(26, 26); closeBtn:SetPoint("TOPRIGHT", -8, -8)

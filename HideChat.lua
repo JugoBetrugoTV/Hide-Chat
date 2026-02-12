@@ -81,6 +81,22 @@ local suppressAlpha = false
 local activeFade    = nil
 
 ---------------------------------------------------------------------------
+-- Custom status notification (avoids UIErrorsFrame duplicate suppression)
+---------------------------------------------------------------------------
+local notifFrame = CreateFrame("MessageFrame", nil, UIParent)
+notifFrame:SetSize(500, 30)
+notifFrame:SetPoint("TOP", UIParent, "TOP", 0, -100)
+notifFrame:SetFontObject(GameFontNormalLarge)
+notifFrame:SetInsertMode("TOP")
+notifFrame:SetFadeDuration(1.5)
+notifFrame:SetTimeVisible(2.0)
+
+local function ShowNotification(text)
+    notifFrame:Clear()
+    notifFrame:AddMessage(text, 1, 1, 1)
+end
+
+---------------------------------------------------------------------------
 -- Third-party chat addon detection
 ---------------------------------------------------------------------------
 local function GetThirdPartyFrames()
@@ -331,10 +347,11 @@ function ns.HideChat(silent)
         ns.isHidden = true
         HideChatDB.hidden = true
         if not silent then
-            UIErrorsFrame:AddMessage("|cFF00FF00HideChat:|r Chat hidden", 1, 1, 1, 1, 3)
+            ShowNotification("|cFF2DD4BFHideChat|r  |cFFE06666Chat hidden|r")
         end
-        if ns.UpdateButton then ns.UpdateButton() end
-        if ns.OnChatHidden then ns.OnChatHidden() end
+        if ns.UpdateButton  then ns.UpdateButton()  end
+        if ns.UpdateMinimap then ns.UpdateMinimap() end
+        if ns.OnChatHidden  then ns.OnChatHidden()  end
     end
 
     if HideChatDB.fade and HideChatDB.fadeDuration > 0 then
@@ -361,11 +378,12 @@ function ns.ShowChat(silent)
     end
 
     if not silent then
-        UIErrorsFrame:AddMessage("|cFF00FF00HideChat:|r Chat visible", 1, 1, 1, 1, 3)
+        ShowNotification("|cFF2DD4BFHideChat|r  |cFF2DD4BFChat visible|r")
     end
-    if ns.UpdateButton then ns.UpdateButton() end
-    if ns.StopBlink  then ns.StopBlink() end
-    if ns.OnChatShown then ns.OnChatShown() end
+    if ns.UpdateButton  then ns.UpdateButton()  end
+    if ns.UpdateMinimap then ns.UpdateMinimap() end
+    if ns.StopBlink     then ns.StopBlink()     end
+    if ns.OnChatShown   then ns.OnChatShown()   end
 end
 
 function HideChat_Toggle()

@@ -290,5 +290,11 @@ function ns.UpdateMinimap()
     if not minimapBtn then return end
     if HideChatDB.showMinimap then
         minimapBtn:Show(); UpdateMinimapPosition()
+        -- Update bubble colour to reflect current state
+        if ns.isHidden then
+            ColorBubble(minimapBtn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
+        else
+            ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+        end
     else minimapBtn:Hide() end
 end
