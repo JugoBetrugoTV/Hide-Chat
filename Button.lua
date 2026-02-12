@@ -2,6 +2,7 @@ local addonName, ns = ...
 
 local btn         -- toggle button
 local minimapBtn  -- minimap button
+local sct = ns.sct
 
 ---------------------------------------------------------------------------
 -- THEME
@@ -24,11 +25,11 @@ local function CreateBubble(parent, s, compact)
     p.sBod = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
     p.sBod:SetSize(s * 0.72, s * 0.46)
     p.sBod:SetPoint("CENTER", parent, "CENTER", shOff, yOff - 0.5)
-    p.sBod:SetColorTexture(0, 0, 0, shAlp)
+    sct(p.sBod, 0, 0, 0, shAlp)
     p.sTail = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
     p.sTail:SetSize(s * 0.22, s * 0.17)
     p.sTail:SetPoint("TOPLEFT", p.sBod, "BOTTOMLEFT", s * 0.12, 1)
-    p.sTail:SetColorTexture(0, 0, 0, shAlp)
+    sct(p.sTail, 0, 0, 0, shAlp)
 
     -- Main body
     p.body = parent:CreateTexture(nil, "ARTWORK", nil, 0)
@@ -44,7 +45,7 @@ local function CreateBubble(parent, s, compact)
     p.shine = parent:CreateTexture(nil, "ARTWORK", nil, 1)
     p.shine:SetSize(s * 0.60, s * 0.07)
     p.shine:SetPoint("TOP", p.body, "TOP", 0, -1)
-    p.shine:SetColorTexture(1, 1, 1, compact and 0.12 or 0.18)
+    sct(p.shine, 1, 1, 1, compact and 0.12 or 0.18)
 
     -- Three dots
     p.dots = {}
@@ -61,10 +62,10 @@ local function CreateBubble(parent, s, compact)
 end
 
 local function ColorBubble(p, r, g, b, a, dr, dg, db)
-    p.body:SetColorTexture(r, g, b, a or 1)
-    p.tail:SetColorTexture(r, g, b, a or 1)
+    sct(p.body, r, g, b, a)
+    sct(p.tail, r, g, b, a)
     for _, d in ipairs(p.dots) do
-        d:SetColorTexture(dr or 0.06, dg or 0.08, db or 0.10, 1)
+        sct(d, dr or 0.06, dg or 0.08, db or 0.10, 1)
     end
 end
 
@@ -82,7 +83,7 @@ function ns.StartBlink()
         blinkState = not blinkState
         if blinkState then
             ColorBubble(btn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
-            btn.bubble.shine:SetColorTexture(1, 1, 1, 0.25)
+            sct(btn.bubble.shine, 1, 1, 1, 0.25)
         else
             ns.UpdateButton()
         end
@@ -114,7 +115,7 @@ function ns.InitButton()
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetSize(28, 20)
     hl:SetPoint("CENTER", 0, 2)
-    hl:SetColorTexture(1, 1, 1, 0.08)
+    sct(hl, 1, 1, 1, 0.08)
 
     ---------- position ---------------------------------------------------
     local pos = HideChatDB.buttonPos
@@ -184,11 +185,11 @@ function ns.UpdateButton()
     if ns.isHidden then
         -- Muted coral bubble
         ColorBubble(btn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
-        btn.bubble.shine:SetColorTexture(1, 1, 1, 0.10)
+        sct(btn.bubble.shine, 1, 1, 1, 0.10)
     else
         -- Bright teal bubble
         ColorBubble(btn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
-        btn.bubble.shine:SetColorTexture(1, 1, 1, 0.22)
+        sct(btn.bubble.shine, 1, 1, 1, 0.22)
     end
 end
 
@@ -221,7 +222,7 @@ function ns.InitMinimapButton()
     -- Dark circle bg
     local bg = minimapBtn:CreateTexture(nil, "BACKGROUND")
     bg:SetSize(26, 26); bg:SetPoint("CENTER")
-    bg:SetColorTexture(SLATE[1], SLATE[2], SLATE[3], 0.92)
+    sct(bg, SLATE[1], SLATE[2], SLATE[3], 0.92)
 
     -- Chat bubble icon (compact = centered, no big offsets)
     minimapBtn.bubble = CreateBubble(minimapBtn, 22, true)
@@ -235,7 +236,7 @@ function ns.InitMinimapButton()
     -- Hover
     local hl = minimapBtn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetSize(24, 24); hl:SetPoint("CENTER")
-    hl:SetColorTexture(1, 1, 1, 0.12)
+    sct(hl, 1, 1, 1, 0.12)
 
     ---------- position ---------------------------------------------------
     UpdateMinimapPosition()
