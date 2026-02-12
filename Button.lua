@@ -103,16 +103,16 @@ end
 function ns.InitButton()
     if btn then return end
 
-    btn = CreateFrame("Button", "HideChatToggleButton", UIParent)
-    btn:SetSize(38, 32)
-    btn:SetFrameStrata("HIGH")
-    btn:SetClampedToScreen(true)
+    local b = CreateFrame("Button", "HideChatToggleButton", UIParent)
+    b:SetSize(38, 32)
+    b:SetFrameStrata("HIGH")
+    b:SetClampedToScreen(true)
 
     -- The bubble IS the icon — no opaque square behind it
-    btn.bubble = CreateBubble(btn, 36)
+    b.bubble = CreateBubble(b, 36)
 
     -- Hover highlight (covers the bubble area)
-    local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
     hl:SetSize(28, 20)
     hl:SetPoint("CENTER", 0, 2)
     sct(hl, 1, 1, 1, 0.08)
@@ -120,33 +120,33 @@ function ns.InitButton()
     ---------- position ---------------------------------------------------
     local pos = HideChatDB.buttonPos
     if pos then
-        btn:ClearAllPoints()
-        btn:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
+        b:ClearAllPoints()
+        b:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     else
-        btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
+        b:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
     end
 
     ---------- dragging ---------------------------------------------------
-    btn:SetMovable(true); btn:EnableMouse(true)
-    btn:RegisterForDrag("LeftButton"); btn:RegisterForClicks("AnyUp")
-    btn:SetScript("OnDragStart", function(self)
+    b:SetMovable(true); b:EnableMouse(true)
+    b:RegisterForDrag("LeftButton"); b:RegisterForClicks("AnyUp")
+    b:SetScript("OnDragStart", function(self)
         if not HideChatDB.lockButton then self:StartMoving() end
     end)
-    btn:SetScript("OnDragStop", function(self)
+    b:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local pt, _, rel, x, y = self:GetPoint()
         HideChatDB.buttonPos = { point = pt, relPoint = rel, x = x, y = y }
     end)
 
     ---------- clicks -----------------------------------------------------
-    btn:SetScript("OnClick", function(_, b)
-        if b == "RightButton" then
+    b:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
         else HideChat_Toggle() end
     end)
 
     ---------- tooltip ----------------------------------------------------
-    btn:SetScript("OnEnter", function(self)
+    b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("HideChat", TEAL[1], TEAL[2], TEAL[3])
         GameTooltip:AddLine(" ")
@@ -166,9 +166,11 @@ function ns.InitButton()
         end
         GameTooltip:Show()
     end)
-    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     ---------- visibility -------------------------------------------------
+    -- Promote to upvalue only after full init succeeds
+    btn = b
     if not HideChatDB.showButton then btn:Hide() end
     ns.UpdateButton()
     ns.InitMinimapButton()
@@ -215,30 +217,32 @@ end
 function ns.InitMinimapButton()
     if minimapBtn then return end
 
-    minimapBtn = CreateFrame("Button", "HideChatMinimapButton", Minimap)
-    minimapBtn:SetSize(32, 32)
-    minimapBtn:SetFrameStrata("MEDIUM"); minimapBtn:SetFrameLevel(8)
+    local m = CreateFrame("Button", "HideChatMinimapButton", Minimap)
+    m:SetSize(32, 32)
+    m:SetFrameStrata("MEDIUM"); m:SetFrameLevel(8)
 
     -- Dark circle bg
-    local bg = minimapBtn:CreateTexture(nil, "BACKGROUND")
+    local bg = m:CreateTexture(nil, "BACKGROUND")
     bg:SetSize(26, 26); bg:SetPoint("CENTER")
     sct(bg, SLATE[1], SLATE[2], SLATE[3], 0.92)
 
     -- Chat bubble icon (compact = centered, no big offsets)
-    minimapBtn.bubble = CreateBubble(minimapBtn, 22, true)
-    ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+    m.bubble = CreateBubble(m, 22, true)
+    ColorBubble(m.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
 
     -- Standard minimap ring (safe file-data ID)
-    local ring = minimapBtn:CreateTexture(nil, "OVERLAY")
+    local ring = m:CreateTexture(nil, "OVERLAY")
     ring:SetSize(54, 54); ring:SetPoint("CENTER")
     pcall(ring.SetTexture, ring, 136430)
 
     -- Hover
-    local hl = minimapBtn:CreateTexture(nil, "HIGHLIGHT")
+    local hl = m:CreateTexture(nil, "HIGHLIGHT")
     hl:SetSize(24, 24); hl:SetPoint("CENTER")
     sct(hl, 1, 1, 1, 0.12)
 
     ---------- position ---------------------------------------------------
+    -- Promote to upvalue only after full init succeeds
+    minimapBtn = m
     UpdateMinimapPosition()
 
     ---------- dragging ---------------------------------------------------
@@ -255,8 +259,8 @@ function ns.InitMinimapButton()
     end)
 
     ---------- clicks -----------------------------------------------------
-    minimapBtn:SetScript("OnClick", function(_, b)
-        if b == "RightButton" then
+    minimapBtn:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
         else HideChat_Toggle() end
     end)
