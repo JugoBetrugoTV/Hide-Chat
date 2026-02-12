@@ -14,26 +14,26 @@ local defaults = {
     showButton       = true,
     lockButton       = false,
     buttonPos        = nil,
-    combat           = false,
+    combat           = true,
     combatRestore    = true,
     fade             = true,
-    fadeDuration     = 0.3,
-    alphaMode        = false,
+    fadeDuration     = 1.0,
+    alphaMode        = true,
     -- Appearance
     opacity          = 0,               -- 0 = fully hidden, 0.01‑1.0 = partial
-    mouseoverReveal  = false,
+    mouseoverReveal  = true,
     -- Automation
-    inactivityTimer  = 0,               -- seconds, 0 = disabled
+    inactivityTimer  = 5,               -- seconds, 0 = disabled
     inactivityReshow = true,            -- show chat on new message
-    instanceHide     = false,
-    instanceTypes    = { party = true, raid = true, pvp = true, arena = true, scenario = false },
+    instanceHide     = true,
+    instanceTypes    = { party = true, raid = true, pvp = true, arena = false, scenario = true },
     screenshotHide   = false,
     -- Chat
     whisperNotify    = true,
-    whisperPass      = false,           -- forward whispers to UIErrorsFrame
+    whisperPass      = true,            -- forward whispers to UIErrorsFrame
     keepCombatLog    = false,
     -- Minimap
-    showMinimap      = false,
+    showMinimap      = true,
     minimapPos       = 220,             -- degrees around minimap ring
     -- Profiles (internal)
     profiles         = nil,             -- populated on first load
@@ -591,7 +591,7 @@ SlashCmdList["HIDECHAT"] = function(msg)
         for k, v in pairs(defaults) do
             if k ~= "profiles" then HideChatDB[k] = v end
         end
-        HideChatDB.instanceTypes = { party = true, raid = true, pvp = true, arena = true, scenario = false }
+        HideChatDB.instanceTypes = { party = true, raid = true, pvp = true, arena = false, scenario = true }
         if ns.UpdateButton then ns.UpdateButton() end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
         print("|cFF00FF00HideChat:|r Settings reset to defaults.")
