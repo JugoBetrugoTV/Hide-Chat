@@ -501,9 +501,18 @@ events:SetScript("OnEvent", function(_, event)
             C_Timer.After(0.5, function() ns.HideChat(true) end)
         end
 
-        if ns.InitButton   then ns.InitButton()   end
-        if ns.InitConfig   then ns.InitConfig()   end
-        if ns.InitFeatures then ns.InitFeatures()  end
+        local function SafeCall(name, fn)
+            local ok, err = pcall(fn)
+            if not ok then
+                print("|cFFFF0000HideChat ERROR in " .. name .. ":|r " .. tostring(err))
+            end
+        end
+
+        if ns.InitButton   then SafeCall("InitButton",   ns.InitButton)   end
+        if ns.InitConfig   then SafeCall("InitConfig",   ns.InitConfig)   end
+        if ns.InitFeatures then SafeCall("InitFeatures", ns.InitFeatures) end
+
+        print("|cFF00FF00HideChat v" .. ns.version .. " loaded.|r Type /hc for toggle, /hc config for settings.")
 
     elseif event == "PLAYER_REGEN_DISABLED" then
         if HideChatDB.combat and not ns.isHidden then
