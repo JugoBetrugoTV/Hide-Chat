@@ -251,54 +251,54 @@ StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
 function ns.InitConfig()
     if frame then return end
 
-    -- Init tables BEFORE frame creation so a partial failure
-    -- doesn't leave them nil while frame is already set.
     checkboxes = {}
     widgets    = { instChecks = {} }
 
     local FW, FH = 400, 600
     local CW = FW - 52
 
-    frame = CreateFrame("Frame", "HideChatConfigFrame", UIParent)
-    frame:SetSize(FW, FH); frame:SetPoint("CENTER")
-    frame:Hide(); frame:SetFrameStrata("DIALOG")
-    frame:SetMovable(true); frame:SetClampedToScreen(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    -- Use a local so that a mid-init error does NOT mark init as done.
+    -- 'frame' is only set at the very end of this function.
+    local f = CreateFrame("Frame", "HideChatConfigFrame", UIParent)
+    f:SetSize(FW, FH); f:SetPoint("CENTER")
+    f:Hide(); f:SetFrameStrata("DIALOG")
+    f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
 
     -- Solid dark background (no WoW dialog textures)
-    local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+    local bg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
     bg:SetAllPoints(); bg:SetColorTexture(rgb(C.bg), 0.98)
 
     -- Frame border
-    BoxBorder(frame, rgb(C.border), 0.55)
+    BoxBorder(f, rgb(C.border), 0.55)
 
     -- ==================== TITLE BAR ====================
-    local titleBg = frame:CreateTexture(nil, "ARTWORK")
+    local titleBg = f:CreateTexture(nil, "ARTWORK")
     titleBg:SetHeight(50); titleBg:SetPoint("TOPLEFT", 1, -1); titleBg:SetPoint("TOPRIGHT", -1, -1)
     titleBg:SetColorTexture(0.04, 0.05, 0.07, 1)
 
     -- Teal accent line
-    local accent = HLine(frame, "ARTWORK", 1, 2, rgb(C.accent), 0.75)
+    local accent = HLine(f, "ARTWORK", 1, 2, rgb(C.accent), 0.75)
     accent:SetPoint("TOPLEFT", titleBg, "BOTTOMLEFT")
     accent:SetPoint("TOPRIGHT", titleBg, "BOTTOMRIGHT")
 
     -- Title text  (teal "HideChat" + dim "Settings")
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 14, -12)
     title:SetText("|cFF2DD4BFHideChat|r")
 
-    local sub = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     sub:SetPoint("TOPLEFT", title, "TOPRIGHT", 6, -2)
     sub:SetText("|cFF888888Settings|r")
 
-    local ver = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local ver = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     ver:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
     ver:SetText("|cFF555555v" .. (ns.version or "?") .. "|r")
 
     -- Close button
-    local closeBtn = CreateFrame("Button", nil, frame)
+    local closeBtn = CreateFrame("Button", nil, f)
     closeBtn:SetSize(26, 26); closeBtn:SetPoint("TOPRIGHT", -8, -8)
     local cBg = closeBtn:CreateTexture(nil, "BACKGROUND")
     cBg:SetAllPoints(); cBg:SetColorTexture(rgb(C.danger), 0.15)
@@ -311,7 +311,7 @@ function ns.InitConfig()
     table.insert(UISpecialFrames, "HideChatConfigFrame")
 
     -- ==================== SCROLL ====================
-    local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", frame)
+    local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", f)
     scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -28, 10)
 
     content = CreateFrame("Frame", "HideChatConfigContent", scroll)
@@ -320,8 +320,8 @@ function ns.InitConfig()
 
     -- Manual scrollbar (replaces removed UIPanelScrollFrameTemplate)
     local bar = CreateFrame("Slider", nil, scroll, "BackdropTemplate")
-    bar:SetWidth(14); bar:SetPoint("TOPRIGHT", frame, -8, -56)
-    bar:SetPoint("BOTTOMRIGHT", frame, -8, 10)
+    bar:SetWidth(14); bar:SetPoint("TOPRIGHT", f, -8, -56)
+    bar:SetPoint("BOTTOMRIGHT", f, -8, 10)
     bar:SetMinMaxValues(0, 1); bar:SetValueStep(1)
     bar:SetBackdrop({ bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
         edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
@@ -508,6 +508,10 @@ function ns.InitConfig()
     )
 
     content:SetHeight(math.abs(Y) + 80)
+
+    -- Only now promote to upvalue — if anything above errored,
+    -- frame stays nil and ToggleConfig will retry InitConfig.
+    frame = f
     frame:Hide()
 end
 
@@ -537,6 +541,7 @@ end
 ---------------------------------------------------------------------------
 function ns.ToggleConfig()
     if not frame then ns.InitConfig() end
+    if not frame then return end   -- InitConfig failed, bail out
     if frame:IsShown() then ns.SaveCurrentProfile(); frame:Hide()
     else Refresh(); frame:Show() end
 end
