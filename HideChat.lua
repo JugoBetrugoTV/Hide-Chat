@@ -26,6 +26,7 @@ local defaults = {
 ---------------------------------------------------------------------------
 ns.isHidden  = false
 ns.defaults  = defaults
+ns.version   = "1.1.0"
 
 -- Invisible anchor – anything parented here is invisible & non-interactive
 local anchor = CreateFrame("Frame", "HideChatAnchor", UIParent)
@@ -34,6 +35,7 @@ anchor:Hide()
 local savedParents  = {}
 local alphaBackup   = {}
 local suppressAlpha = false
+local activeFade    = nil   -- reference to a running fade ticker
 
 ---------------------------------------------------------------------------
 -- Third-party chat addon detection
@@ -107,6 +109,16 @@ function ns.GetChatElements()
 end
 
 ---------------------------------------------------------------------------
+-- Cancel any running fade so a new toggle doesn't conflict
+---------------------------------------------------------------------------
+local function CancelFade()
+    if activeFade then
+        activeFade:Cancel()
+        activeFade = nil
+    end
+end
+
+---------------------------------------------------------------------------
 -- METHOD A – Reparent (default, most robust)
 ---------------------------------------------------------------------------
 local function ReparentHide()
@@ -170,10 +182,10 @@ end
 -- Fade helper (works with either hide method)
 ---------------------------------------------------------------------------
 local function Fade(from, to, duration, onDone)
+    CancelFade()
     local elements = ns.GetChatElements()
     local elapsed  = 0
-    local ticker
-    ticker = C_Timer.NewTicker(0.016, function()
+    activeFade = C_Timer.NewTicker(0.016, function()
         elapsed = elapsed + 0.016
         local p = math.min(elapsed / duration, 1)
         local a = from + (to - from) * p
@@ -181,8 +193,25 @@ local function Fade(from, to, duration, onDone)
         for _, el in ipairs(elements) do el:SetAlpha(a) end
         suppressAlpha = false
         if p >= 1 then
-            ticker:Cancel()
+            CancelFade()
             if onDone then onDone() end
+        end
+    end)
+end
+
+---------------------------------------------------------------------------
+-- Block chat edit box while hidden (Enter key, click-to-chat, etc.)
+---------------------------------------------------------------------------
+local function InitEditBoxBlock()
+    if not ChatFrame_OpenChat then return end
+    hooksecurefunc("ChatFrame_OpenChat", function()
+        if not ns.isHidden then return end
+        for i = 1, NUM_CHAT_WINDOWS do
+            local eb = _G["ChatFrame" .. i .. "EditBox"]
+            if eb and eb:HasFocus() then
+                eb:ClearFocus()
+                eb:Hide()
+            end
         end
     end)
 end
@@ -192,6 +221,7 @@ end
 ---------------------------------------------------------------------------
 function ns.HideChat(silent)
     if ns.isHidden then return end
+    CancelFade()
 
     local function commit()
         if HideChatDB.alphaMode then AlphaHide() else ReparentHide() end
@@ -212,6 +242,7 @@ end
 
 function ns.ShowChat(silent)
     if not ns.isHidden then return end
+    CancelFade()
 
     -- Restore frames first so they exist to be faded in
     if HideChatDB.alphaMode then AlphaShow() else ReparentShow() end
@@ -229,7 +260,40 @@ function ns.ShowChat(silent)
 end
 
 function HideChat_Toggle()
+    -- Clear combat flag on any manual toggle so auto-show doesn't double-fire
+    ns._combatHid = false
     if ns.isHidden then ns.ShowChat() else ns.HideChat() end
+end
+
+---------------------------------------------------------------------------
+-- Addon Compartment support (Retail 10.1+ – minimap addon menu)
+-- Functions referenced via ## AddonCompartmentFunc in _Mainline.toc
+---------------------------------------------------------------------------
+function HideChat_OnAddonCompartmentClick(_, buttonName)
+    if buttonName == "RightButton" then
+        if ns.ToggleConfig then ns.ToggleConfig() end
+    else
+        HideChat_Toggle()
+    end
+end
+
+function HideChat_OnAddonCompartmentEnter(data)
+    GameTooltip:SetOwner(data, "ANCHOR_TOPRIGHT")
+    GameTooltip:AddLine("HideChat", 0, 1, 0)
+    GameTooltip:AddLine(" ")
+    if ns.isHidden then
+        GameTooltip:AddLine("Status: Hidden", 0.9, 0.2, 0.2)
+    else
+        GameTooltip:AddLine("Status: Visible", 0.2, 0.9, 0.2)
+    end
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Left-click: Toggle chat", 1, 1, 1)
+    GameTooltip:AddLine("Right-click: Settings", 1, 1, 1)
+    GameTooltip:Show()
+end
+
+function HideChat_OnAddonCompartmentLeave()
+    GameTooltip:Hide()
 end
 
 ---------------------------------------------------------------------------
@@ -248,6 +312,9 @@ events:SetScript("OnEvent", function(_, event)
             if HideChatDB[k] == nil then HideChatDB[k] = v end
         end
 
+        -- Block edit box while hidden
+        InitEditBoxBlock()
+
         -- Restore previous hidden state
         if HideChatDB.hidden then
             C_Timer.After(0.5, function()
@@ -260,6 +327,7 @@ events:SetScript("OnEvent", function(_, event)
         if ns.InitConfig then ns.InitConfig() end
 
     elseif event == "PLAYER_REGEN_DISABLED" then
+        -- Only set combat flag if WE are about to hide (not already hidden)
         if HideChatDB.combat and not ns.isHidden then
             ns._combatHid = true
             ns.HideChat(true)
@@ -274,15 +342,47 @@ events:SetScript("OnEvent", function(_, event)
 end)
 
 ---------------------------------------------------------------------------
--- Slash commands:  /hidechat | /hc         → toggle
---                  /hidechat config        → settings
+-- Slash commands:  /hidechat | /hc           → toggle
+--                  /hidechat config          → settings
+--                  /hidechat status          → show current state
+--                  /hidechat reset           → reset all settings
 ---------------------------------------------------------------------------
 SLASH_HIDECHAT1 = "/hidechat"
 SLASH_HIDECHAT2 = "/hc"
 SlashCmdList["HIDECHAT"] = function(msg)
     msg = strtrim(msg):lower()
+
     if msg == "config" or msg == "options" or msg == "settings" then
         if ns.ToggleConfig then ns.ToggleConfig() end
+
+    elseif msg == "status" then
+        local mode = HideChatDB.alphaMode and "alpha" or "reparent"
+        print("|cFF00FF00HideChat v" .. ns.version .. "|r")
+        print("  Chat: " .. (ns.isHidden and "|cFFFF4444hidden|r" or "|cFF44FF44visible|r"))
+        print("  Mode: " .. mode)
+        print("  Combat auto-hide: " .. (HideChatDB.combat and "on" or "off"))
+        print("  Fade: " .. (HideChatDB.fade and string.format("%.1fs", HideChatDB.fadeDuration) or "off"))
+        -- Detect loaded chat addons
+        local addons = {}
+        if IsAddOnLoaded and IsAddOnLoaded("Prat-3.0") or
+           C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Prat-3.0") then
+            addons[#addons + 1] = "Prat-3.0"
+        end
+        if _G["ChattynatorFrame"] then addons[#addons + 1] = "Chattynator" end
+        if _G["ElvUI"]            then addons[#addons + 1] = "ElvUI" end
+        if _G["GlassFrame"]       then addons[#addons + 1] = "Glass" end
+        if #addons > 0 then
+            print("  Chat addons: " .. table.concat(addons, ", "))
+        end
+
+    elseif msg == "reset" then
+        -- Show chat first if hidden
+        if ns.isHidden then ns.ShowChat(true) end
+        -- Restore all defaults
+        for k, v in pairs(defaults) do HideChatDB[k] = v end
+        if ns.UpdateButton then ns.UpdateButton() end
+        print("|cFF00FF00HideChat:|r Settings reset to defaults.")
+
     else
         HideChat_Toggle()
     end

@@ -1,8 +1,9 @@
 ## Interface: 11505
 ## Title: HideChat
-## Notes: Hide and show the chat window with a slash command or keybind. (Classic Era)
+## Notes: Hide and show the chat window with a slash command, keybind or button. (Classic Era)
 ## Author: JugoBetrugoTV
-## Version: 1.0.0
+## Version: 1.1.0
+## IconTexture: Interface\GossipFrame\ChatBubbleGossipIcon
 ## SavedVariables: HideChatDB
 
 Bindings.xml

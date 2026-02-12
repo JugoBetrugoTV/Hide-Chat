@@ -10,10 +10,10 @@ function ns.InitButton()
 
     btn = CreateFrame("Button", "HideChatToggleButton", UIParent)
     btn:SetSize(30, 30)
-    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameStrata("HIGH")
     btn:SetClampedToScreen(true)
 
-    -- Dark rounded background
+    -- Dark background
     local bg = btn:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
     bg:SetColorTexture(0.12, 0.12, 0.12, 0.85)
@@ -31,7 +31,7 @@ function ns.InitButton()
     icon:SetTexture("Interface\\GossipFrame\\ChatBubbleGossipIcon")
     btn.icon = icon
 
-    -- State colour overlay (green = visible, red = hidden)
+    -- State colour dot (green = visible, red = hidden)
     local overlay = btn:CreateTexture(nil, "ARTWORK", nil, 1)
     overlay:SetSize(8, 8)
     overlay:SetPoint("BOTTOMRIGHT", -3, 3)
@@ -43,7 +43,8 @@ function ns.InitButton()
         btn:ClearAllPoints()
         btn:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     else
-        btn:SetPoint("TOPLEFT", ChatFrame1 or UIParent, "TOPRIGHT", 4, 0)
+        -- Safe default: fixed position in bottom-left, above the chat area
+        btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
     end
 
     ---------- dragging ---------------------------------------------------
@@ -83,6 +84,12 @@ function ns.InitButton()
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("HideChat", 0, 1, 0)
         GameTooltip:AddLine(" ")
+        if ns.isHidden then
+            GameTooltip:AddLine("Status: Hidden", 0.9, 0.2, 0.2)
+        else
+            GameTooltip:AddLine("Status: Visible", 0.2, 0.9, 0.2)
+        end
+        GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: Toggle chat", 1, 1, 1)
         GameTooltip:AddLine("Right-click: Settings", 1, 1, 1)
         if not HideChatDB.lockButton then
@@ -121,4 +128,14 @@ function ns.UpdateButton()
         btn.icon:SetDesaturated(false)
         btn.icon:SetVertexColor(1, 1, 1)
     end
+end
+
+---------------------------------------------------------------------------
+-- Reset button position to default (called from config)
+---------------------------------------------------------------------------
+function ns.ResetButtonPos()
+    if not btn then return end
+    HideChatDB.buttonPos = nil
+    btn:ClearAllPoints()
+    btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
 end
