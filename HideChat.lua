@@ -234,8 +234,21 @@ local function ReparentShow()
     end
     savedParents = {}
     savedShown   = {}
+    -- FCF_SelectDockFrame can call protected functions; defer if in combat
     if FCF_SelectDockFrame and ChatFrame1 then
-        FCF_SelectDockFrame(ChatFrame1)
+        if InCombatLockdown() then
+            local ticker
+            ticker = C_Timer.NewTicker(0.5, function()
+                if not InCombatLockdown() then
+                    ticker:Cancel()
+                    if FCF_SelectDockFrame and ChatFrame1 then
+                        FCF_SelectDockFrame(ChatFrame1)
+                    end
+                end
+            end)
+        else
+            FCF_SelectDockFrame(ChatFrame1)
+        end
     end
 end
 
@@ -253,9 +266,20 @@ local function AlphaHide()
                         local t = HideChatDB.opacity or 0
                         if HideChatDB.alphaMode or t > 0 then
                             if alphaBackup[self] then alphaBackup[self].alpha = a end
-                            suppressAlpha = true
-                            self:SetAlpha(t)
-                            suppressAlpha = false
+                            if InCombatLockdown() then
+                                -- Defer to next frame to break the taint chain
+                                C_Timer.After(0, function()
+                                    if ns.isHidden and not suppressAlpha and not ns.mouseoverActive then
+                                        suppressAlpha = true
+                                        self:SetAlpha(t)
+                                        suppressAlpha = false
+                                    end
+                                end)
+                            else
+                                suppressAlpha = true
+                                self:SetAlpha(t)
+                                suppressAlpha = false
+                            end
                         end
                     end
                 end)
