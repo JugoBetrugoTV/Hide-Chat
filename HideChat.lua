@@ -445,8 +445,14 @@ function HideChat_OnAddonCompartmentClick(_, buttonName)
     end
 end
 
-function HideChat_OnAddonCompartmentEnter(data)
-    GameTooltip:SetOwner(data, "ANCHOR_TOPRIGHT")
+function HideChat_OnAddonCompartmentEnter(addonName, menuButton)
+    -- 11.0+ Menu API passes addon name string; menuButton may be the frame
+    local owner = menuButton
+    if not owner or not owner.GetBottom then
+        owner = _G["AddonCompartmentFrame"]
+    end
+    if not owner or not owner.GetBottom then return end
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
     GameTooltip:AddLine("HideChat", 0, 1, 0)
     GameTooltip:AddLine(" ")
     if ns.isHidden then
