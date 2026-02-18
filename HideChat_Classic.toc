@@ -2,7 +2,7 @@
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Mists of Pandaria Classic)
 ## Author: JugoBetrugoTV
-## Version: 1.2.0
+## Version: 1.3.0
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB

@@ -178,6 +178,7 @@ local function Slider(parent, label, x, y, width, lo, hi, step, key, fmt)
     sl:SetThumbTexture(th); wrap._thumb = th
     sl:SetScript("OnValueChanged", function(self, val)
         val = math.floor(val / step + 0.5) * step
+        val = math.max(lo, math.min(val, hi))
         HideChatDB[key] = val
         value:SetText(fmt and fmt(val) or tostring(val))
         local mn, mx = self:GetMinMaxValues()
@@ -245,8 +246,45 @@ StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
         local eb = self.EditBox or self.editBox
         local n = eb and eb:GetText()
         if n and n ~= "" then
-            ns.CreateProfile(n)
-            if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+            if ns.CreateProfile(n) then
+                if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+            end
+        end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true,
+}
+StaticPopupDialogs["HIDECHAT_COPY_PROFILE"] = {
+    text = "HideChat – Copy current profile to:",
+    button1 = "Copy", button2 = "Cancel", hasEditBox = true,
+    OnShow = function(self)
+        local eb = self.EditBox or self.editBox
+        if eb then eb:SetText((HideChatCharDB.activeProfile or "Default") .. " (Copy)") end
+    end,
+    OnAccept = function(self)
+        local eb = self.EditBox or self.editBox
+        local n = eb and eb:GetText()
+        if n and n ~= "" then
+            if ns.CreateProfile(n) then
+                if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+            end
+        end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true,
+}
+StaticPopupDialogs["HIDECHAT_RENAME_PROFILE"] = {
+    text = "HideChat – Rename profile \"%s\" to:",
+    button1 = "Rename", button2 = "Cancel", hasEditBox = true,
+    OnShow = function(self)
+        local eb = self.EditBox or self.editBox
+        if eb then eb:SetText(HideChatCharDB.activeProfile or "") end
+    end,
+    OnAccept = function(self)
+        local eb = self.EditBox or self.editBox
+        local n = eb and eb:GetText()
+        if n and n ~= "" then
+            if ns.RenameProfile(HideChatCharDB.activeProfile, n) then
+                if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+            end
         end
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
@@ -257,6 +295,14 @@ StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
     OnAccept = function()
         ns.DeleteProfile(HideChatCharDB.activeProfile)
         if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true,
+}
+StaticPopupDialogs["HIDECHAT_RESET_ALL"] = {
+    text = "HideChat – Reset all settings to defaults?",
+    button1 = "Reset", button2 = "Cancel",
+    OnAccept = function()
+        SlashCmdList["HIDECHAT"]("reset")
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
@@ -343,24 +389,21 @@ function ns.InitConfig()
 
     -- ==================== SCROLL ====================
     local scroll = CreateFrame("ScrollFrame", "HideChatConfigScroll", f)
-    scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -28, 10)
+    scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -22, 10)
 
     content = CreateFrame("Frame", "HideChatConfigContent", scroll)
     content:SetSize(CW, 1060)
     scroll:SetScrollChild(content)
 
-    -- Manual scrollbar (replaces removed UIPanelScrollFrameTemplate)
-    local bar = CreateFrame("Slider", nil, scroll, "BackdropTemplate")
-    bar:SetWidth(14); bar:SetPoint("TOPRIGHT", f, -8, -56)
-    bar:SetPoint("BOTTOMRIGHT", f, -8, 10)
+    -- Themed scrollbar (teal / dark-slate — no WoW default textures)
+    local bar = CreateFrame("Slider", nil, scroll)
+    bar:SetWidth(6); bar:SetPoint("TOPRIGHT", f, -10, -58)
+    bar:SetPoint("BOTTOMRIGHT", f, -10, 12)
     bar:SetMinMaxValues(0, 1); bar:SetValueStep(1)
-    bar:SetBackdrop({ bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
-        edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
-        edgeSize = 8, tile = true, tileSize = 8,
-        insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+    local barTrack = bar:CreateTexture(nil, "BACKGROUND")
+    barTrack:SetAllPoints(); sct(barTrack, C.border, 0.35)
     local thumb = bar:CreateTexture(nil, "OVERLAY")
-    thumb:SetSize(14, 24)
-    thumb:SetTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
+    thumb:SetSize(6, 32); sct(thumb, C.accent, 0.55)
     bar:SetThumbTexture(thumb)
 
     local function UpdateScrollRange()
@@ -387,7 +430,7 @@ function ns.InitConfig()
     local Y = 0
 
     ---- CARD: General ────────────────────────────────────────
-    local c1 = Card(content, "General", 0, Y, CW, 150)
+    local c1 = Card(content, "General", 0, Y, CW, 180)
     local y1 = -26
     checkboxes.showButton = Checkbox(c1, "Show toggle button", PAD, y1,
         "showButton", function() if ns.UpdateButton then ns.UpdateButton() end end)
@@ -400,7 +443,11 @@ function ns.InitConfig()
     y1 = y1 - 30
     checkboxes.showMinimap = Checkbox(c1, "Show minimap button", PAD, y1,
         "showMinimap", function() if ns.UpdateMinimap then ns.UpdateMinimap() end end)
-    Y = Y - 158
+    y1 = y1 - 28
+    Btn(c1, "Reset Minimap Pos", PAD + 26, y1, 130, function()
+        if ns.ResetMinimapPos then ns.ResetMinimapPos() end
+    end)
+    Y = Y - 188
 
     ---- CARD: Combat ─────────────────────────────────────────
     local c2 = Card(content, "Combat", 0, Y, CW, 82)
@@ -464,12 +511,56 @@ function ns.InitConfig()
     Y = Y - 90
 
     ---- CARD: Compatibility ──────────────────────────────────
-    local c6 = Card(content, "Compatibility", 0, Y, CW, 54)
+    local c6 = Card(content, "Compatibility", 0, Y, CW, 82)
     checkboxes.alphaMode = Checkbox(c6, "Alpha mode (Chattynator / Prat / ElvUI)",
         PAD, -26, "alphaMode", function()
             if ns.isHidden then ns.ShowChat(true); ns.HideChat(true) end
+            -- Update conflict note live
+            if widgets.addonNote then
+                local addons = {}
+                local iL = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+                if iL then
+                    if pcall(iL, "Prat-3.0") and iL("Prat-3.0") then addons[#addons+1] = "Prat-3.0" end
+                    if pcall(iL, "Chattynator") and iL("Chattynator") then addons[#addons+1] = "Chattynator" end
+                end
+                if _G["ElvUI"]     then addons[#addons+1] = "ElvUI" end
+                if _G["GlassFrame"] then addons[#addons+1] = "Glass" end
+                if #addons > 0 then
+                    local list = table.concat(addons, ", ")
+                    if not HideChatDB.alphaMode then
+                        widgets.addonNote:SetText("|cFFE0A030Detected: " .. list .. " — enable Alpha mode|r")
+                    else
+                        widgets.addonNote:SetText("|cFF666666Detected: " .. list .. "|r")
+                    end
+                end
+            end
         end)
-    Y = Y - 62
+    -- Detect chat addons and show compatibility note
+    do
+        local detected = {}
+        local iL = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+        if iL then
+            if pcall(iL, "Prat-3.0") and iL("Prat-3.0") then detected[#detected+1] = "Prat-3.0" end
+            if pcall(iL, "Chattynator") and iL("Chattynator") then detected[#detected+1] = "Chattynator" end
+        end
+        if _G["ElvUI"]     then detected[#detected+1] = "ElvUI" end
+        if _G["GlassFrame"] then detected[#detected+1] = "Glass" end
+        local note = c6:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        note:SetPoint("TOPLEFT", PAD + 8, -52); note:SetWidth(CW - 20)
+        note:SetJustifyH("LEFT")
+        if #detected > 0 then
+            local list = table.concat(detected, ", ")
+            if not HideChatDB.alphaMode then
+                note:SetText("|cFFE0A030Detected: " .. list .. " — enable Alpha mode|r")
+            else
+                note:SetText("|cFF666666Detected: " .. list .. "|r")
+            end
+        else
+            note:SetText("|cFF555555No third-party chat addons detected|r")
+        end
+        widgets.addonNote = note
+    end
+    Y = Y - 90
 
     ---- CARD: Profiles ───────────────────────────────────────
     local c7 = Card(content, "Profiles", 0, Y, CW, 92)
@@ -504,13 +595,24 @@ function ns.InitConfig()
         end
     end)
 
-    Btn(c7, "New", PAD, -60, 68, function()
+    local bx = PAD
+    Btn(c7, "New", bx, -60, 58, function()
         StaticPopup_Show("HIDECHAT_NEW_PROFILE")
     end)
-    Btn(c7, "Copy", PAD + 74, -60, 68, function()
-        StaticPopup_Show("HIDECHAT_NEW_PROFILE")
+    bx = bx + 64
+    Btn(c7, "Copy", bx, -60, 58, function()
+        StaticPopup_Show("HIDECHAT_COPY_PROFILE")
     end)
-    Btn(c7, "Delete", PAD + 148, -60, 68, function()
+    bx = bx + 64
+    Btn(c7, "Rename", bx, -60, 66, function()
+        local name = HideChatCharDB.activeProfile
+        if name == "Default" then
+            print("|cFF2DD4BFHideChat:|r Cannot rename the Default profile."); return
+        end
+        StaticPopup_Show("HIDECHAT_RENAME_PROFILE", name)
+    end)
+    bx = bx + 72
+    Btn(c7, "Delete", bx, -60, 66, function()
         local name = HideChatCharDB.activeProfile
         if name == "Default" then
             print("|cFF2DD4BFHideChat:|r Cannot delete Default profile."); return
@@ -519,18 +621,25 @@ function ns.InitConfig()
     end)
     Y = Y - 100
 
-    ---- HINT TEXT ────────────────────────────────────────────
+    ---- RESET BUTTON ─────────────────────────────────────────
     Y = Y - 10
+    Btn(content, "Reset All Settings", 0, Y, 140, function()
+        StaticPopup_Show("HIDECHAT_RESET_ALL")
+    end)
+    Y = Y - 34
+
+    ---- HINT TEXT ────────────────────────────────────────────
     local hint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hint:SetPoint("TOPLEFT", 4, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
     hint:SetText(
         "|cFF555555/hidechat|r  or  |cFF555555/hc|r — toggle\n" ..
         "|cFF555555/hc config|r — settings\n" ..
         "|cFF555555/hc status|r — diagnostics\n" ..
-        "|cFF555555/hc reset|r  — restore defaults"
+        "|cFF555555/hc reset|r  — restore defaults\n" ..
+        "|cFF555555Key Bindings|r — ESC > Key Bindings > HideChat"
     )
 
-    content:SetHeight(math.abs(Y) + 80)
+    content:SetHeight(math.abs(Y) + 90)
 
     -- Only now promote to upvalue — if anything above errored,
     -- frame stays nil and ToggleConfig will retry InitConfig.
@@ -563,6 +672,11 @@ local function Refresh()
             (HideChatCharDB.activeProfile or "Default") .. "|r")
     end
     RefreshDeps()
+end
+
+-- Public accessor so /hc reset can sync the UI
+function ns.RefreshConfig()
+    Refresh()
 end
 
 ---------------------------------------------------------------------------

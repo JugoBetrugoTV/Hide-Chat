@@ -123,7 +123,8 @@ function ns.InitButton()
         b:ClearAllPoints()
         b:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     else
-        b:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
+        local d = ns.BUTTON_DEFAULT
+        b:SetPoint(d.point, UIParent, d.point, d.x, d.y)
     end
 
     ---------- dragging ---------------------------------------------------
@@ -204,7 +205,8 @@ function ns.ResetButtonPos()
     if not btn then return end
     HideChatDB.buttonPos = nil
     btn:ClearAllPoints()
-    btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 4, 165)
+    local d = ns.BUTTON_DEFAULT
+    btn:SetPoint(d.point, UIParent, d.point, d.x, d.y)
 end
 
 ---------------------------------------------------------------------------
@@ -212,8 +214,8 @@ end
 ---------------------------------------------------------------------------
 local function UpdateMinimapPosition()
     if not minimapBtn then return end
-    local angle = math.rad(HideChatDB.minimapPos or 220)
-    local r = 80
+    local angle = math.rad(HideChatDB.minimapPos or ns.MINIMAP_DEFAULT_ANGLE)
+    local r = ns.MINIMAP_RADIUS
     minimapBtn:ClearAllPoints()
     minimapBtn:SetPoint("CENTER", Minimap, "CENTER",
         math.cos(angle) * r, math.sin(angle) * r)
@@ -289,6 +291,12 @@ function ns.InitMinimapButton()
     minimapBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     ns.UpdateMinimap()
+end
+
+function ns.ResetMinimapPos()
+    if not minimapBtn then return end
+    HideChatDB.minimapPos = ns.MINIMAP_DEFAULT_ANGLE
+    UpdateMinimapPosition()
 end
 
 function ns.UpdateMinimap()

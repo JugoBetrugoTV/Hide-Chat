@@ -45,7 +45,15 @@ local defaults = {
 ns.isHidden       = false
 ns.mouseoverActive = false
 ns.defaults       = defaults
-ns.version        = "1.2.0"
+ns.version        = "1.3.0"
+
+-- Named constants (avoids magic numbers scattered across files)
+ns.BUTTON_DEFAULT       = { point = "BOTTOMLEFT", x = 4, y = 165 }
+ns.MINIMAP_RADIUS       = 80
+ns.MINIMAP_DEFAULT_ANGLE = 220
+ns.FADE_TICK            = 0.016
+ns.NOTIF_DISPLAY        = 1.5
+ns.NOTIF_FADE           = 1.0
 
 -- Shorthand: set a solid-colour texture
 -- Accepts (tex, r, g, b [,a])  OR  (tex, {r,g,b} [,a])
@@ -99,12 +107,12 @@ local function ShowNotification(text)
     notifFrame:Show()
     notifFrame:SetScript("OnUpdate", nil)
     if notifTimer then notifTimer:Cancel() end
-    notifTimer = C_Timer.NewTimer(1.5, function()
+    notifTimer = C_Timer.NewTimer(ns.NOTIF_DISPLAY, function()
         notifTimer = nil
         local fade = 0
         notifFrame:SetScript("OnUpdate", function(self, dt)
             fade = fade + dt
-            local a = 1 - (fade / 1.0)
+            local a = 1 - (fade / ns.NOTIF_FADE)
             if a <= 0 then
                 self:Hide()
                 self:SetScript("OnUpdate", nil)
@@ -317,8 +325,8 @@ local function Fade(from, to, duration, onDone)
     CancelFade()
     local elements = ns.GetChatElements()
     local elapsed  = 0
-    activeFade = C_Timer.NewTicker(0.016, function()
-        elapsed = elapsed + 0.016
+    activeFade = C_Timer.NewTicker(ns.FADE_TICK, function()
+        elapsed = elapsed + ns.FADE_TICK
         local p = math.min(elapsed / duration, 1)
         local a = from + (to - from) * p
         suppressAlpha = true
@@ -502,14 +510,37 @@ function ns.LoadProfile(name)
 end
 
 function ns.CreateProfile(name)
-    if not name or name == "" then return end
+    if not name or name == "" then return false end
     if not HideChatDB.profiles then HideChatDB.profiles = {} end
-    -- Copy current settings
+    if HideChatDB.profiles[name] then
+        print("|cFF2DD4BFHideChat:|r Profile \"" .. name .. "\" already exists.")
+        return false
+    end
     local p = {}
     for k in pairs(settingKeys) do p[k] = HideChatDB[k] end
     p.hidden = false
     HideChatDB.profiles[name] = p
     ns.LoadProfile(name)
+    return true
+end
+
+function ns.RenameProfile(oldName, newName)
+    if oldName == "Default" then
+        print("|cFF2DD4BFHideChat:|r Cannot rename the Default profile.")
+        return false
+    end
+    if not newName or newName == "" then return false end
+    if not HideChatDB.profiles or not HideChatDB.profiles[oldName] then return false end
+    if HideChatDB.profiles[newName] then
+        print("|cFF2DD4BFHideChat:|r Profile \"" .. newName .. "\" already exists.")
+        return false
+    end
+    HideChatDB.profiles[newName] = HideChatDB.profiles[oldName]
+    HideChatDB.profiles[oldName] = nil
+    if HideChatCharDB and HideChatCharDB.activeProfile == oldName then
+        HideChatCharDB.activeProfile = newName
+    end
+    return true
 end
 
 function ns.DeleteProfile(name)
@@ -659,8 +690,9 @@ SlashCmdList["HIDECHAT"] = function(msg)
             if k ~= "profiles" then HideChatDB[k] = v end
         end
         HideChatDB.instanceTypes = { party = true, raid = true, pvp = true, arena = false, scenario = true }
-        if ns.UpdateButton then ns.UpdateButton() end
+        if ns.UpdateButton  then ns.UpdateButton()  end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
+        if ns.RefreshConfig then ns.RefreshConfig() end
         print("|cFF00FF00HideChat:|r Settings reset to defaults.")
 
     else

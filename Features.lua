@@ -77,10 +77,28 @@ end
 ---------------------------------------------------------------------------
 function ns.InitMouseover()
     local detector = CreateFrame("Frame", "HideChatMouseoverDetector", UIParent)
-    detector:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
-    detector:SetSize(440, 200)
     detector:SetFrameStrata("BACKGROUND")
     detector:EnableMouse(false)   -- transparent to clicks
+
+    -- Dynamically anchor to ChatFrame1 instead of hardcoded position
+    local function UpdateDetectorBounds()
+        detector:ClearAllPoints()
+        local chat = ChatFrame1
+        if chat and chat.GetLeft then
+            detector:SetPoint("BOTTOMLEFT", chat, "BOTTOMLEFT", -10, -10)
+            detector:SetPoint("TOPRIGHT", chat, "TOPRIGHT", 10, 10)
+        else
+            -- Fallback: bottom-left area
+            detector:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
+            detector:SetSize(440, 200)
+        end
+    end
+    UpdateDetectorBounds()
+
+    -- Re-anchor when chat frame moves (user drag, addon repositioning)
+    if ChatFrame1 then
+        hooksecurefunc(ChatFrame1, "SetPoint", UpdateDetectorBounds)
+    end
 
     local active = false
     local cooldown = 0
@@ -88,9 +106,7 @@ function ns.InitMouseover()
     detector:SetScript("OnUpdate", function(self, elapsed)
         cooldown = cooldown - elapsed
         if not ns.isHidden then
-            if active then
-                active = false
-            end
+            if active then active = false end
             return
         end
         if not HideChatDB.mouseoverReveal then return end
