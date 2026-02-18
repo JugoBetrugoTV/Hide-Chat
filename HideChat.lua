@@ -35,6 +35,8 @@ local defaults = {
     -- Minimap
     showMinimap      = true,
     minimapPos       = 220,             -- degrees around minimap ring
+    -- Config panel
+    configPos        = nil,             -- saved position {point,x,y}
     -- Profiles (internal)
     profiles         = nil,             -- populated on first load
 }
@@ -660,6 +662,12 @@ SlashCmdList["HIDECHAT"] = function(msg)
 
     if msg == "config" or msg == "options" or msg == "settings" then
         if ns.ToggleConfig then ns.ToggleConfig() end
+
+    elseif msg == "show" or msg == "on" then
+        if ns.isHidden then ns.ShowChat() end
+
+    elseif msg == "hide" or msg == "off" then
+        if not ns.isHidden then ns.HideChat() end
 
     elseif msg == "status" then
         local mode = UseAlphaMethod() and "alpha" or "reparent"

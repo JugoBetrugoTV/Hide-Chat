@@ -79,13 +79,18 @@ function ns.StartBlink()
     ns._hasWhisper = true
     blinkState = false
     blinkTicker = C_Timer.NewTicker(0.5, function()
-        if not btn then return end
         blinkState = not blinkState
         if blinkState then
-            ColorBubble(btn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
-            sct(btn.bubble.shine, 1, 1, 1, 0.25)
+            if btn then
+                ColorBubble(btn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
+                sct(btn.bubble.shine, 1, 1, 1, 0.25)
+            end
+            if minimapBtn then
+                ColorBubble(minimapBtn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
+            end
         else
             ns.UpdateButton()
+            ns.UpdateMinimap()
         end
     end)
 end
@@ -95,6 +100,7 @@ function ns.StopBlink()
     if blinkTicker then blinkTicker:Cancel(); blinkTicker = nil end
     blinkState = false
     ns.UpdateButton()
+    ns.UpdateMinimap()
 end
 
 ---------------------------------------------------------------------------
@@ -282,6 +288,9 @@ function ns.InitMinimapButton()
         else
             GameTooltip:AddLine("Status: Visible", TEAL[1], TEAL[2], TEAL[3])
         end
+        if ns._hasWhisper then
+            GameTooltip:AddLine("New whisper!", AMBER[1], AMBER[2], AMBER[3])
+        end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: Toggle", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
@@ -303,6 +312,7 @@ function ns.UpdateMinimap()
     if not minimapBtn then return end
     if HideChatDB.showMinimap then
         minimapBtn:Show(); UpdateMinimapPosition()
+        if blinkState then return end   -- don't overwrite blink colour
         -- Update bubble colour to reflect current state
         if ns.isHidden then
             ColorBubble(minimapBtn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)

@@ -322,12 +322,23 @@ function ns.InitConfig()
     -- Use a local so that a mid-init error does NOT mark init as done.
     -- 'frame' is only set at the very end of this function.
     local f = CreateFrame("Frame", "HideChatConfigFrame", UIParent)
-    f:SetSize(FW, FH); f:SetPoint("CENTER")
+    f:SetSize(FW, FH)
+    -- Restore saved position or default to center
+    local pos = HideChatDB.configPos
+    if pos then
+        f:SetPoint(pos.point, UIParent, pos.point, pos.x, pos.y)
+    else
+        f:SetPoint("CENTER")
+    end
     f:Hide(); f:SetFrameStrata("DIALOG")
     f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local pt, _, _, x, y = self:GetPoint()
+        HideChatDB.configPos = { point = pt, x = x, y = y }
+    end)
     -- Save profile when hidden (covers Escape, close button, ToggleConfig)
     f:SetScript("OnHide", function() ns.SaveCurrentProfile() end)
 
@@ -501,14 +512,20 @@ function ns.InitConfig()
     Y = Y - 183
 
     ---- CARD: Chat ───────────────────────────────────────────
-    local c5 = Card(content, "Chat", 0, Y, CW, 82)
+    local c5 = Card(content, "Chat", 0, Y, CW, 134)
     local y5 = -26
     checkboxes.whisperNotify = Checkbox(c5, "Blink button on whisper", PAD, y5,
         "whisperNotify")
     y5 = y5 - 26
     checkboxes.whisperPass = Checkbox(c5, "Show whispers while hidden", PAD, y5,
         "whisperPass")
-    Y = Y - 90
+    y5 = y5 - 26
+    checkboxes.keepCombatLog = Checkbox(c5, "Keep combat log visible", PAD, y5,
+        "keepCombatLog")
+    y5 = y5 - 26
+    checkboxes.screenshotHide = Checkbox(c5, "Hide chat for screenshots", PAD, y5,
+        "screenshotHide")
+    Y = Y - 142
 
     ---- CARD: Compatibility ──────────────────────────────────
     local c6 = Card(content, "Compatibility", 0, Y, CW, 82)
@@ -633,6 +650,7 @@ function ns.InitConfig()
     hint:SetPoint("TOPLEFT", 4, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
     hint:SetText(
         "|cFF555555/hidechat|r  or  |cFF555555/hc|r — toggle\n" ..
+        "|cFF555555/hc show|r  /  |cFF555555/hc hide|r — force state\n" ..
         "|cFF555555/hc config|r — settings\n" ..
         "|cFF555555/hc status|r — diagnostics\n" ..
         "|cFF555555/hc reset|r  — restore defaults\n" ..
@@ -668,8 +686,12 @@ local function Refresh()
     if widgets.opacSlider  then widgets.opacSlider.slider:SetValue(HideChatDB.opacity or 0) end
     if widgets.inactSlider then widgets.inactSlider.slider:SetValue(HideChatDB.inactivityTimer) end
     if widgets.profLabel then
-        widgets.profLabel:SetText("Active: |cFFFFFFFF" ..
-            (HideChatCharDB.activeProfile or "Default") .. "|r")
+        local names = ns.GetProfileNames and ns.GetProfileNames() or {}
+        local cur = HideChatCharDB.activeProfile or "Default"
+        local idx = 1
+        for i, n in ipairs(names) do if n == cur then idx = i; break end end
+        local count = #names > 0 and (" |cFF888888(" .. idx .. "/" .. #names .. ")|r") or ""
+        widgets.profLabel:SetText("Active: |cFFFFFFFF" .. cur .. "|r" .. count)
     end
     RefreshDeps()
 end

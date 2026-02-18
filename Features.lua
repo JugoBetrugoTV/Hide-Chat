@@ -80,13 +80,35 @@ function ns.InitMouseover()
     detector:SetFrameStrata("BACKGROUND")
     detector:EnableMouse(false)   -- transparent to clicks
 
-    -- Dynamically anchor to ChatFrame1 instead of hardcoded position
+    -- Compute the bounding box that covers ChatFrame1 AND any third-party
+    -- chat panels (ElvUI, Chattynator, Glass) so mouseover works everywhere.
     local function UpdateDetectorBounds()
         detector:ClearAllPoints()
-        local chat = ChatFrame1
-        if chat and chat.GetLeft then
-            detector:SetPoint("BOTTOMLEFT", chat, "BOTTOMLEFT", -10, -10)
-            detector:SetPoint("TOPRIGHT", chat, "TOPRIGHT", 10, 10)
+
+        -- Collect all visible chat regions to compute a union rect
+        local lo, bo, ri, to  -- screen-space bounds (left, bottom, right, top)
+        local s = UIParent:GetEffectiveScale()
+
+        local function ExpandBounds(f)
+            if not f or not f.GetLeft or not f:IsVisible() then return end
+            local fl, fb, fw, fh = f:GetLeft(), f:GetBottom(), f:GetWidth(), f:GetHeight()
+            if not fl or not fb then return end
+            local fr, ft = fl + fw, fb + fh
+            lo = lo and math.min(lo, fl) or fl
+            bo = bo and math.min(bo, fb) or fb
+            ri = ri and math.max(ri, fr) or fr
+            to = to and math.max(to, ft) or ft
+        end
+
+        ExpandBounds(ChatFrame1)
+
+        -- Third-party chat panels
+        local tp = { "ChattynatorFrame", "LeftChatPanel", "RightChatPanel", "GlassFrame" }
+        for _, name in ipairs(tp) do ExpandBounds(_G[name]) end
+
+        if lo and bo and ri and to then
+            detector:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", lo - 10, bo - 10)
+            detector:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", ri + 10, to + 10)
         else
             -- Fallback: bottom-left area
             detector:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
@@ -98,6 +120,13 @@ function ns.InitMouseover()
     -- Re-anchor when chat frame moves (user drag, addon repositioning)
     if ChatFrame1 then
         hooksecurefunc(ChatFrame1, "SetPoint", UpdateDetectorBounds)
+    end
+    -- Also hook third-party panels if they exist at init time
+    for _, name in ipairs({ "ChattynatorFrame", "LeftChatPanel", "GlassFrame" }) do
+        local f = _G[name]
+        if f and f.SetPoint then
+            hooksecurefunc(f, "SetPoint", UpdateDetectorBounds)
+        end
     end
 
     local active = false
