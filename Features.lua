@@ -9,10 +9,11 @@ function ns.InitFeatures()
     ns.InitInstanceHide()
     ns.InitWhisper()
     ns.InitScreenshot()
+    ns.InitMinimapFallback()
 end
 
 ---------------------------------------------------------------------------
--- 1.  INACTIVITY TIMER  – auto-hide after N seconds of silence,
+-- 1.  INACTIVITY TIMER  - auto-hide after N seconds of silence,
 --     optionally re-show when a new message arrives.
 ---------------------------------------------------------------------------
 local inactivityHandle = nil
@@ -73,7 +74,7 @@ function ns.OnChatShown()
 end
 
 ---------------------------------------------------------------------------
--- 2.  MOUSEOVER REVEAL  – show chat when cursor enters the chat area
+-- 2.  MOUSEOVER REVEAL  - show chat when cursor enters the chat area
 ---------------------------------------------------------------------------
 function ns.InitMouseover()
     local detector = CreateFrame("Frame", "HideChatMouseoverDetector", UIParent)
@@ -87,7 +88,6 @@ function ns.InitMouseover()
 
         -- Collect all visible chat regions to compute a union rect
         local lo, bo, ri, to  -- screen-space bounds (left, bottom, right, top)
-        local s = UIParent:GetEffectiveScale()
 
         local function ExpandBounds(f)
             if not f or not f.GetLeft or not f:IsVisible() then return end
@@ -120,12 +120,23 @@ function ns.InitMouseover()
     -- Re-anchor when chat frame moves (user drag, addon repositioning)
     if ChatFrame1 then
         hooksecurefunc(ChatFrame1, "SetPoint", UpdateDetectorBounds)
+        -- Also hook resize events
+        hooksecurefunc(ChatFrame1, "SetSize", UpdateDetectorBounds)
+        if ChatFrame1.SetWidth then
+            hooksecurefunc(ChatFrame1, "SetWidth", UpdateDetectorBounds)
+        end
+        if ChatFrame1.SetHeight then
+            hooksecurefunc(ChatFrame1, "SetHeight", UpdateDetectorBounds)
+        end
     end
     -- Also hook third-party panels if they exist at init time
     for _, name in ipairs({ "ChattynatorFrame", "LeftChatPanel", "GlassFrame" }) do
         local f = _G[name]
-        if f and f.SetPoint then
-            hooksecurefunc(f, "SetPoint", UpdateDetectorBounds)
+        if f then
+            if f.SetPoint then hooksecurefunc(f, "SetPoint", UpdateDetectorBounds) end
+            if f.SetSize  then hooksecurefunc(f, "SetSize",  UpdateDetectorBounds) end
+            if f.SetWidth then hooksecurefunc(f, "SetWidth", UpdateDetectorBounds) end
+            if f.SetHeight then hooksecurefunc(f, "SetHeight", UpdateDetectorBounds) end
         end
     end
 
@@ -192,8 +203,12 @@ function ns.InitInstanceHide()
 end
 
 ---------------------------------------------------------------------------
--- 4.  WHISPER PASSTHROUGH  +  WHISPER NOTIFICATION
+-- 4.  WHISPER PASSTHROUGH  +  WHISPER NOTIFICATION  +  SOUND  +  QUICK-REPLY
 ---------------------------------------------------------------------------
+-- Track last whisper sender for quick-reply
+ns._lastWhisperSender = nil
+ns._lastWhisperIsBNet = false
+
 function ns.InitWhisper()
     local f = CreateFrame("Frame")
     f:RegisterEvent("CHAT_MSG_WHISPER")
@@ -202,11 +217,20 @@ function ns.InitWhisper()
     f:SetScript("OnEvent", function(_, event, text, sender)
         if not ns.isHidden then return end
 
+        -- Track sender for quick-reply
+        ns._lastWhisperSender = sender
+        ns._lastWhisperIsBNet = (event == "CHAT_MSG_BN_WHISPER")
+
         -- Passthrough: show whisper text in UIErrorsFrame
         if HideChatDB.whisperPass then
             local tag = (event == "CHAT_MSG_BN_WHISPER") and "[BNet] " or ""
             local line = "|cFFFF88FF" .. tag .. sender .. ":|r " .. text
             UIErrorsFrame:AddMessage(line, 1, 1, 1, 1, 5)
+        end
+
+        -- Sound notification
+        if HideChatDB.whisperSound then
+            PlaySound(3081, "Master")  -- SOUNDKIT.TELL_MESSAGE (whisper received)
         end
 
         -- Notification: tell Button.lua to start blinking
@@ -216,8 +240,27 @@ function ns.InitWhisper()
     end)
 end
 
+-- Quick-reply: open edit box with /w <sender> pre-filled
+function ns.QuickReply()
+    if not ns._lastWhisperSender then
+        print("|cFF2DD4BFHideChat:|r No recent whisper to reply to.")
+        return
+    end
+    -- Show chat first if hidden
+    if ns.isHidden then ns.ShowChat() end
+    local prefix
+    if ns._lastWhisperIsBNet then
+        prefix = "/w " .. ns._lastWhisperSender .. " "
+    else
+        prefix = "/w " .. ns._lastWhisperSender .. " "
+    end
+    if ChatFrame_OpenChat then
+        ChatFrame_OpenChat(prefix)
+    end
+end
+
 ---------------------------------------------------------------------------
--- 5.  SCREENSHOT MODE  – hide chat briefly for a clean screenshot
+-- 5.  SCREENSHOT MODE  - hide chat briefly for a clean screenshot
 ---------------------------------------------------------------------------
 function ns.InitScreenshot()
     if not Screenshot then return end
@@ -236,4 +279,31 @@ function ns.InitScreenshot()
         end
         return orig(...)
     end
+end
+
+---------------------------------------------------------------------------
+-- 6.  MINIMAP BUTTON FALLBACK  - anchor to UIParent if Minimap is hidden
+---------------------------------------------------------------------------
+function ns.InitMinimapFallback()
+    if not Minimap then return end
+    local minimapBtn = _G["HideChatMinimapButton"]
+    -- Check periodically (every 2s) if minimap visibility changed
+    local wasVisible = Minimap:IsVisible()
+    C_Timer.NewTicker(2, function()
+        minimapBtn = minimapBtn or _G["HideChatMinimapButton"]
+        if not minimapBtn then return end
+        local visible = Minimap:IsVisible()
+        if visible == wasVisible then return end
+        wasVisible = visible
+        if not visible then
+            -- Minimap hidden: move button to UIParent
+            minimapBtn:SetParent(UIParent)
+            minimapBtn:ClearAllPoints()
+            minimapBtn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -20, -20)
+        else
+            -- Minimap restored: move back
+            minimapBtn:SetParent(Minimap)
+            if ns.UpdateMinimap then ns.UpdateMinimap() end
+        end
+    end)
 end

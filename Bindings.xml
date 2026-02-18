@@ -2,4 +2,11 @@
     <Binding name="HIDECHAT_TOGGLE" header="HIDECHAT" runOnUp="false">
         HideChat_Toggle()
     </Binding>
+    <Binding name="HIDECHAT_PEEK" runOnUp="true">
+        if keystate == "down" then
+            HideChat_PeekDown()
+        else
+            HideChat_PeekUp()
+        end
+    </Binding>
 </Bindings>

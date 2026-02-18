@@ -12,8 +12,22 @@ local CORAL   = { 0.95, 0.40, 0.40 }   -- hidden state
 local AMBER   = { 0.98, 0.75, 0.15 }   -- whisper blink
 local SLATE   = { 0.10, 0.12, 0.16 }   -- dark bg
 
+-- Colorblind-safe alternatives (high contrast, blue/orange)
+local CB_VISIBLE = { 0.20, 0.60, 1.00 }   -- bright blue
+local CB_HIDDEN  = { 1.00, 0.55, 0.00 }   -- bright orange
+local CB_WHISPER = { 1.00, 1.00, 0.20 }   -- bright yellow
+
+-- Get current theme colours based on colorblind setting
+local function GetColors()
+    if HideChatDB and HideChatDB.colorblind then
+        return CB_VISIBLE, CB_HIDDEN, CB_WHISPER
+    end
+    return TEAL, CORAL, AMBER
+end
+
 ---------------------------------------------------------------------------
 -- Helper: create a floating chat-bubble icon with shadow + shine
+-- Colorblind mode adds a shape indicator (square=hidden, circle=visible)
 ---------------------------------------------------------------------------
 local function CreateBubble(parent, s, compact)
     local p = {}
@@ -47,7 +61,7 @@ local function CreateBubble(parent, s, compact)
     p.shine:SetPoint("TOP", p.body, "TOP", 0, -1)
     sct(p.shine, 1, 1, 1, compact and 0.12 or 0.18)
 
-    -- Three dots
+    -- Three dots (default) / shape indicator for colorblind
     p.dots = {}
     local dotSz = math.max(3, s * 0.11)
     local space  = s * 0.19
@@ -58,6 +72,12 @@ local function CreateBubble(parent, s, compact)
         p.dots[#p.dots + 1] = d
     end
 
+    -- Colorblind shape indicator (overlaid, hidden by default)
+    p.cbIndicator = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    p.cbIndicator:SetPoint("CENTER", p.body, "CENTER", 0, -0.5)
+    p.cbIndicator:SetText("")
+    p.cbIndicator:Hide()
+
     return p
 end
 
@@ -66,6 +86,27 @@ local function ColorBubble(p, r, g, b, a, dr, dg, db)
     sct(p.tail, r, g, b, a)
     for _, d in ipairs(p.dots) do
         sct(d, dr or 0.06, dg or 0.08, db or 0.10, 1)
+    end
+end
+
+-- Update colorblind shape indicator
+local function UpdateCBIndicator(bubble, isHidden, isWhisper)
+    if not bubble or not bubble.cbIndicator then return end
+    if HideChatDB and HideChatDB.colorblind then
+        -- Show shape: X when hidden, checkmark when visible, ! when whisper
+        if isWhisper then
+            bubble.cbIndicator:SetText("|cFFFFFF00!|r")
+        elseif isHidden then
+            bubble.cbIndicator:SetText("|cFFFFAAAAX|r")
+        else
+            bubble.cbIndicator:SetText("")
+        end
+        bubble.cbIndicator:Show()
+        -- Hide dots in colorblind mode, show indicator instead
+        for _, d in ipairs(bubble.dots) do d:Hide() end
+    else
+        bubble.cbIndicator:Hide()
+        for _, d in ipairs(bubble.dots) do d:Show() end
     end
 end
 
@@ -80,13 +121,16 @@ function ns.StartBlink()
     blinkState = false
     blinkTicker = C_Timer.NewTicker(0.5, function()
         blinkState = not blinkState
+        local _, _, amber = GetColors()
         if blinkState then
             if btn then
-                ColorBubble(btn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
+                ColorBubble(btn.bubble, amber[1], amber[2], amber[3], 1, 0.40, 0.28, 0.02)
                 sct(btn.bubble.shine, 1, 1, 1, 0.25)
+                UpdateCBIndicator(btn.bubble, nil, true)
             end
             if minimapBtn then
-                ColorBubble(minimapBtn.bubble, AMBER[1], AMBER[2], AMBER[3], 1, 0.40, 0.28, 0.02)
+                ColorBubble(minimapBtn.bubble, amber[1], amber[2], amber[3], 1, 0.40, 0.28, 0.02)
+                UpdateCBIndicator(minimapBtn.bubble, nil, true)
             end
         else
             ns.UpdateButton()
@@ -104,7 +148,7 @@ function ns.StopBlink()
 end
 
 ---------------------------------------------------------------------------
--- TOGGLE BUTTON  (floating chat bubble — no square frame)
+-- TOGGLE BUTTON  (floating chat bubble - no square frame)
 ---------------------------------------------------------------------------
 function ns.InitButton()
     if btn then return end
@@ -114,7 +158,7 @@ function ns.InitButton()
     b:SetFrameStrata("HIGH")
     b:SetClampedToScreen(true)
 
-    -- The bubble IS the icon — no opaque square behind it
+    -- The bubble IS the icon - no opaque square behind it
     b.bubble = CreateBubble(b, 36)
 
     -- Hover highlight (covers the bubble area)
@@ -149,25 +193,40 @@ function ns.InitButton()
     b:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
-        else HideChat_Toggle() end
+        elseif button == "MiddleButton" then
+            -- Quick-reply to last whisper
+            if ns._hasWhisper and ns.QuickReply then
+                ns.QuickReply()
+            else
+                HideChat_Toggle()
+            end
+        else
+            HideChat_Toggle()
+        end
     end)
 
     ---------- tooltip ----------------------------------------------------
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("HideChat", TEAL[1], TEAL[2], TEAL[3])
+        local teal = GetColors()
+        GameTooltip:AddLine("HideChat", teal[1], teal[2], teal[3])
         GameTooltip:AddLine(" ")
         if ns.isHidden then
-            GameTooltip:AddLine("Status: Hidden", CORAL[1], CORAL[2], CORAL[3])
+            local _, coral = GetColors()
+            GameTooltip:AddLine("Status: Hidden", coral[1], coral[2], coral[3])
         else
-            GameTooltip:AddLine("Status: Visible", TEAL[1], TEAL[2], TEAL[3])
+            GameTooltip:AddLine("Status: Visible", teal[1], teal[2], teal[3])
         end
         if ns._hasWhisper then
-            GameTooltip:AddLine("New whisper!", AMBER[1], AMBER[2], AMBER[3])
+            local _, _, amber = GetColors()
+            GameTooltip:AddLine("New whisper!", amber[1], amber[2], amber[3])
         end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: Toggle chat", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
+        if ns._hasWhisper then
+            GameTooltip:AddLine("Middle-click: Quick reply", 0.8, 0.8, 0.8)
+        end
         if not HideChatDB.lockButton then
             GameTooltip:AddLine("Drag: Move button", 0.5, 0.5, 0.5)
         end
@@ -191,15 +250,18 @@ function ns.UpdateButton()
     if HideChatDB.showButton then btn:Show() else btn:Hide(); return end
     if blinkState then return end
 
+    local teal, coral = GetColors()
     if ns.isHidden then
-        -- Muted coral bubble
-        ColorBubble(btn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
+        -- Muted coral/orange bubble
+        ColorBubble(btn.bubble, coral[1], coral[2], coral[3], 0.65, 0.30, 0.10, 0.10)
         sct(btn.bubble.shine, 1, 1, 1, 0.10)
     else
-        -- Bright teal bubble
-        ColorBubble(btn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+        -- Bright teal/blue bubble
+        ColorBubble(btn.bubble, teal[1], teal[2], teal[3], 1, 0.04, 0.20, 0.18)
         sct(btn.bubble.shine, 1, 1, 1, 0.22)
     end
+
+    UpdateCBIndicator(btn.bubble, ns.isHidden, false)
 
     -- Refresh tooltip live if currently hovering
     if GameTooltip:IsOwned(btn) then
@@ -241,7 +303,8 @@ function ns.InitMinimapButton()
 
     -- Chat bubble icon (compact = centered, no big offsets)
     m.bubble = CreateBubble(m, 22, true)
-    ColorBubble(m.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+    local teal = GetColors()
+    ColorBubble(m.bubble, teal[1], teal[2], teal[3], 1, 0.04, 0.20, 0.18)
 
     -- Standard minimap ring (safe file-data ID)
     local ring = m:CreateTexture(nil, "OVERLAY")
@@ -275,25 +338,39 @@ function ns.InitMinimapButton()
     minimapBtn:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
             if ns.ToggleConfig then ns.ToggleConfig() end
-        else HideChat_Toggle() end
+        elseif button == "MiddleButton" then
+            if ns._hasWhisper and ns.QuickReply then
+                ns.QuickReply()
+            else
+                HideChat_Toggle()
+            end
+        else
+            HideChat_Toggle()
+        end
     end)
 
     ---------- tooltip ----------------------------------------------------
     minimapBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("HideChat", TEAL[1], TEAL[2], TEAL[3])
+        local teal2 = GetColors()
+        GameTooltip:AddLine("HideChat", teal2[1], teal2[2], teal2[3])
         GameTooltip:AddLine(" ")
         if ns.isHidden then
-            GameTooltip:AddLine("Status: Hidden", CORAL[1], CORAL[2], CORAL[3])
+            local _, coral = GetColors()
+            GameTooltip:AddLine("Status: Hidden", coral[1], coral[2], coral[3])
         else
-            GameTooltip:AddLine("Status: Visible", TEAL[1], TEAL[2], TEAL[3])
+            GameTooltip:AddLine("Status: Visible", teal2[1], teal2[2], teal2[3])
         end
         if ns._hasWhisper then
-            GameTooltip:AddLine("New whisper!", AMBER[1], AMBER[2], AMBER[3])
+            local _, _, amber = GetColors()
+            GameTooltip:AddLine("New whisper!", amber[1], amber[2], amber[3])
         end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: Toggle", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
+        if ns._hasWhisper then
+            GameTooltip:AddLine("Middle-click: Quick reply", 0.8, 0.8, 0.8)
+        end
         GameTooltip:AddLine("Drag: Reposition", 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
@@ -313,12 +390,14 @@ function ns.UpdateMinimap()
     if HideChatDB.showMinimap then
         minimapBtn:Show(); UpdateMinimapPosition()
         if blinkState then return end   -- don't overwrite blink colour
+        local teal, coral = GetColors()
         -- Update bubble colour to reflect current state
         if ns.isHidden then
-            ColorBubble(minimapBtn.bubble, CORAL[1], CORAL[2], CORAL[3], 0.65, 0.30, 0.10, 0.10)
+            ColorBubble(minimapBtn.bubble, coral[1], coral[2], coral[3], 0.65, 0.30, 0.10, 0.10)
         else
-            ColorBubble(minimapBtn.bubble, TEAL[1], TEAL[2], TEAL[3], 1, 0.04, 0.20, 0.18)
+            ColorBubble(minimapBtn.bubble, teal[1], teal[2], teal[3], 1, 0.04, 0.20, 0.18)
         end
+        UpdateCBIndicator(minimapBtn.bubble, ns.isHidden, false)
         -- Refresh tooltip live if currently hovering
         if GameTooltip:IsOwned(minimapBtn) then
             minimapBtn:GetScript("OnEnter")(minimapBtn)

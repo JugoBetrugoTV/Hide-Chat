@@ -3,7 +3,7 @@ local addonName, ns = ...
 local frame, content, checkboxes, widgets
 
 ---------------------------------------------------------------------------
--- THEME  (teal / dark-slate — no recycled WoW dialog textures)
+-- THEME  (teal / dark-slate - no recycled WoW dialog textures)
 ---------------------------------------------------------------------------
 local C = {
     accent  = { 0.18, 0.83, 0.75 },   -- teal
@@ -240,7 +240,7 @@ end
 ---------------------------------------------------------------------------
 StaticPopupDialogs = StaticPopupDialogs or {}
 StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
-    text = "HideChat – New profile name:",
+    text = "HideChat \226\128\147 New profile name:",
     button1 = "Create", button2 = "Cancel", hasEditBox = true,
     OnAccept = function(self)
         local eb = self.EditBox or self.editBox
@@ -254,7 +254,7 @@ StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_COPY_PROFILE"] = {
-    text = "HideChat – Copy current profile to:",
+    text = "HideChat \226\128\147 Copy current profile to:",
     button1 = "Copy", button2 = "Cancel", hasEditBox = true,
     OnShow = function(self)
         local eb = self.EditBox or self.editBox
@@ -272,7 +272,7 @@ StaticPopupDialogs["HIDECHAT_COPY_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_RENAME_PROFILE"] = {
-    text = "HideChat – Rename profile \"%s\" to:",
+    text = "HideChat \226\128\147 Rename profile \"%s\" to:",
     button1 = "Rename", button2 = "Cancel", hasEditBox = true,
     OnShow = function(self)
         local eb = self.EditBox or self.editBox
@@ -290,7 +290,7 @@ StaticPopupDialogs["HIDECHAT_RENAME_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
-    text = "HideChat – Delete profile \"%s\"?",
+    text = "HideChat \226\128\147 Delete profile \"%s\"?",
     button1 = "Delete", button2 = "Cancel",
     OnAccept = function()
         ns.DeleteProfile(HideChatCharDB.activeProfile)
@@ -299,10 +299,37 @@ StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_RESET_ALL"] = {
-    text = "HideChat – Reset all settings to defaults?",
+    text = "HideChat \226\128\147 Reset all settings to defaults?",
     button1 = "Reset", button2 = "Cancel",
     OnAccept = function()
         SlashCmdList["HIDECHAT"]("reset")
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true,
+}
+StaticPopupDialogs["HIDECHAT_IMPORT_PROFILE"] = {
+    text = "HideChat \226\128\147 Paste import string:",
+    button1 = "Import", button2 = "Cancel", hasEditBox = true,
+    OnAccept = function(self)
+        local eb = self.EditBox or self.editBox
+        local str = eb and eb:GetText()
+        if str and str ~= "" then
+            if ns.ImportProfile(str) then
+                if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
+            end
+        end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true,
+}
+StaticPopupDialogs["HIDECHAT_EXPORT_PROFILE"] = {
+    text = "HideChat \226\128\147 Export string (copy this):",
+    button1 = "OK", hasEditBox = true,
+    OnShow = function(self)
+        local eb = self.EditBox or self.editBox
+        if eb then
+            local str = ns.ExportProfile() or ""
+            eb:SetText(str)
+            eb:HighlightText()
+        end
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
@@ -403,10 +430,10 @@ function ns.InitConfig()
     scroll:SetPoint("TOPLEFT", 10, -56); scroll:SetPoint("BOTTOMRIGHT", -22, 10)
 
     content = CreateFrame("Frame", "HideChatConfigContent", scroll)
-    content:SetSize(CW, 1060)
+    content:SetSize(CW, 1600)
     scroll:SetScrollChild(content)
 
-    -- Themed scrollbar (teal / dark-slate — no WoW default textures)
+    -- Themed scrollbar (teal / dark-slate - no WoW default textures)
     local bar = CreateFrame("Slider", nil, scroll)
     bar:SetWidth(6); bar:SetPoint("TOPRIGHT", f, -10, -58)
     bar:SetPoint("BOTTOMRIGHT", f, -10, 12)
@@ -440,7 +467,7 @@ function ns.InitConfig()
     local PAD = 8   -- card inner padding
     local Y = 0
 
-    ---- CARD: General ────────────────────────────────────────
+    ---- CARD: General --------------------------------------------------------
     local c1 = Card(content, "General", 0, Y, CW, 180)
     local y1 = -26
     checkboxes.showButton = Checkbox(c1, "Show toggle button", PAD, y1,
@@ -460,15 +487,17 @@ function ns.InitConfig()
     end)
     Y = Y - 188
 
-    ---- CARD: Combat ─────────────────────────────────────────
-    local c2 = Card(content, "Combat", 0, Y, CW, 82)
+    ---- CARD: Combat ---------------------------------------------------------
+    local c2 = Card(content, "Combat", 0, Y, CW, 108)
     checkboxes.combat = Checkbox(c2, "Auto-hide in combat", PAD, -26,
         "combat", function() RefreshDeps() end)
     checkboxes.combatRestore = Checkbox(c2, "Auto-show after combat", PAD, -52, "combatRestore")
     widgets.combatRestore = checkboxes.combatRestore
-    Y = Y - 90
+    checkboxes.raidAutoShow = Checkbox(c2, "Auto-show on ready-check / encounter", PAD, -78,
+        "raidAutoShow")
+    Y = Y - 116
 
-    ---- CARD: Automation ─────────────────────────────────────
+    ---- CARD: Automation -----------------------------------------------------
     local c3 = Card(content, "Automation", 0, Y, CW, 182)
     local y3 = -26
     checkboxes.instanceHide = Checkbox(c3, "Auto-hide in instances", PAD, y3,
@@ -493,10 +522,10 @@ function ns.InitConfig()
     widgets.inactivityReshow = checkboxes.inactivityReshow
     Y = Y - 190
 
-    ---- CARD: Appearance ─────────────────────────────────────
-    local c4 = Card(content, "Appearance", 0, Y, CW, 175)
+    ---- CARD: Appearance -----------------------------------------------------
+    local c4 = Card(content, "Appearance", 0, Y, CW, 202)
     local y4 = -26
-    checkboxes.fade = Checkbox(c4, "Fade transition", PAD, y4,
+    checkboxes.fade = Checkbox(c4, "Fade transition (smooth easing)", PAD, y4,
         "fade", function() RefreshDeps() end)
     y4 = y4 - 30
     widgets.fadeSlider = Slider(c4, "Fade duration", PAD + 8, y4, 200,
@@ -509,10 +538,16 @@ function ns.InitConfig()
     y4 = y4 - 42
     checkboxes.mouseoverReveal = Checkbox(c4, "Show on mouse-over", PAD, y4,
         "mouseoverReveal")
-    Y = Y - 183
+    y4 = y4 - 26
+    checkboxes.colorblind = Checkbox(c4, "Colorblind mode (high contrast)", PAD, y4,
+        "colorblind", function()
+            if ns.UpdateButton then ns.UpdateButton() end
+            if ns.UpdateMinimap then ns.UpdateMinimap() end
+        end)
+    Y = Y - 210
 
-    ---- CARD: Chat ───────────────────────────────────────────
-    local c5 = Card(content, "Chat", 0, Y, CW, 134)
+    ---- CARD: Chat -----------------------------------------------------------
+    local c5 = Card(content, "Chat", 0, Y, CW, 186)
     local y5 = -26
     checkboxes.whisperNotify = Checkbox(c5, "Blink button on whisper", PAD, y5,
         "whisperNotify")
@@ -520,14 +555,30 @@ function ns.InitConfig()
     checkboxes.whisperPass = Checkbox(c5, "Show whispers while hidden", PAD, y5,
         "whisperPass")
     y5 = y5 - 26
+    checkboxes.whisperSound = Checkbox(c5, "Play sound on whisper", PAD, y5,
+        "whisperSound")
+    y5 = y5 - 26
     checkboxes.keepCombatLog = Checkbox(c5, "Keep combat log visible", PAD, y5,
         "keepCombatLog")
     y5 = y5 - 26
     checkboxes.screenshotHide = Checkbox(c5, "Hide chat for screenshots", PAD, y5,
         "screenshotHide")
-    Y = Y - 142
+    y5 = y5 - 26
+    checkboxes.scrollToRecent = Checkbox(c5, "Scroll to recent on unhide", PAD, y5,
+        "scrollToRecent")
+    Y = Y - 194
 
-    ---- CARD: Compatibility ──────────────────────────────────
+    ---- CARD: Zone Memory ---------------------------------------------------
+    local c_zone = Card(content, "Zone Memory", 0, Y, CW, 68)
+    checkboxes.zoneMemoryEnabled = Checkbox(c_zone, "Remember chat state per zone", PAD, -26,
+        "zoneMemoryEnabled")
+    Btn(c_zone, "Clear Memory", PAD + 260, -26, 80, function()
+        HideChatDB.zoneMemory = {}
+        print("|cFF2DD4BFHideChat:|r Zone memory cleared.")
+    end)
+    Y = Y - 76
+
+    ---- CARD: Compatibility --------------------------------------------------
     local c6 = Card(content, "Compatibility", 0, Y, CW, 82)
     checkboxes.alphaMode = Checkbox(c6, "Alpha mode (Chattynator / Prat / ElvUI)",
         PAD, -26, "alphaMode", function()
@@ -545,7 +596,7 @@ function ns.InitConfig()
                 if #addons > 0 then
                     local list = table.concat(addons, ", ")
                     if not HideChatDB.alphaMode then
-                        widgets.addonNote:SetText("|cFFE0A030Detected: " .. list .. " — enable Alpha mode|r")
+                        widgets.addonNote:SetText("|cFFE0A030Detected: " .. list .. " \226\128\148 enable Alpha mode|r")
                     else
                         widgets.addonNote:SetText("|cFF666666Detected: " .. list .. "|r")
                     end
@@ -568,7 +619,7 @@ function ns.InitConfig()
         if #detected > 0 then
             local list = table.concat(detected, ", ")
             if not HideChatDB.alphaMode then
-                note:SetText("|cFFE0A030Detected: " .. list .. " — enable Alpha mode|r")
+                note:SetText("|cFFE0A030Detected: " .. list .. " \226\128\148 enable Alpha mode|r")
             else
                 note:SetText("|cFF666666Detected: " .. list .. "|r")
             end
@@ -579,8 +630,8 @@ function ns.InitConfig()
     end
     Y = Y - 90
 
-    ---- CARD: Profiles ───────────────────────────────────────
-    local c7 = Card(content, "Profiles", 0, Y, CW, 92)
+    ---- CARD: Profiles -------------------------------------------------------
+    local c7 = Card(content, "Profiles", 0, Y, CW, 120)
     local profLabel = c7:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     profLabel:SetPoint("TOPLEFT", PAD, -28); profLabel:SetText("Active: Default")
     widgets.profLabel = profLabel
@@ -636,30 +687,75 @@ function ns.InitConfig()
         end
         StaticPopup_Show("HIDECHAT_DELETE_PROFILE", name)
     end)
-    Y = Y - 100
 
-    ---- RESET BUTTON ─────────────────────────────────────────
+    -- Import / Export buttons
+    bx = PAD
+    Btn(c7, "Export", bx, -88, 68, function()
+        StaticPopup_Show("HIDECHAT_EXPORT_PROFILE")
+    end)
+    bx = bx + 74
+    Btn(c7, "Import", bx, -88, 68, function()
+        StaticPopup_Show("HIDECHAT_IMPORT_PROFILE")
+    end)
+
+    -- Spec profile binding info
+    local specNote = c7:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    specNote:SetPoint("TOPLEFT", bx + 80, -92); specNote:SetWidth(CW - bx - 86)
+    specNote:SetJustifyH("LEFT")
+    if GetSpecialization then
+        local specIdx = GetSpecialization()
+        local bound = HideChatDB.specProfiles and HideChatDB.specProfiles[specIdx]
+        if bound then
+            specNote:SetText("|cFF888888Spec " .. specIdx .. " -> " .. bound .. "|r")
+        else
+            specNote:SetText("|cFF555555No spec binding|r")
+        end
+    else
+        specNote:SetText("|cFF555555Spec profiles: retail only|r")
+    end
+    widgets.specNote = specNote
+
+    -- Bind current profile to current spec
+    if GetSpecialization then
+        Btn(c7, "Bind to Spec", bx + 74, -88, 90, function()
+            local specIdx = GetSpecialization()
+            if not specIdx then return end
+            if not HideChatDB.specProfiles then HideChatDB.specProfiles = {} end
+            local cur = HideChatCharDB.activeProfile or "Default"
+            HideChatDB.specProfiles[specIdx] = cur
+            print("|cFF2DD4BFHideChat:|r Spec " .. specIdx .. " bound to profile \"" .. cur .. "\".")
+            if widgets.specNote then
+                widgets.specNote:SetText("|cFF888888Spec " .. specIdx .. " -> " .. cur .. "|r")
+            end
+        end)
+    end
+    Y = Y - 128
+
+    ---- RESET BUTTON ---------------------------------------------------------
     Y = Y - 10
     Btn(content, "Reset All Settings", 0, Y, 140, function()
         StaticPopup_Show("HIDECHAT_RESET_ALL")
     end)
     Y = Y - 34
 
-    ---- HINT TEXT ────────────────────────────────────────────
+    ---- HINT TEXT ------------------------------------------------------------
     local hint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hint:SetPoint("TOPLEFT", 4, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
     hint:SetText(
-        "|cFF555555/hidechat|r  or  |cFF555555/hc|r — toggle\n" ..
-        "|cFF555555/hc show|r  /  |cFF555555/hc hide|r — force state\n" ..
-        "|cFF555555/hc config|r — settings\n" ..
-        "|cFF555555/hc status|r — diagnostics\n" ..
-        "|cFF555555/hc reset|r  — restore defaults\n" ..
-        "|cFF555555Key Bindings|r — ESC > Key Bindings > HideChat"
+        "|cFF555555/hidechat|r  or  |cFF555555/hc|r \226\128\148 toggle\n" ..
+        "|cFF555555/hc show|r  /  |cFF555555/hc hide|r \226\128\148 force state\n" ..
+        "|cFF555555/hc config|r \226\128\148 settings\n" ..
+        "|cFF555555/hc status|r \226\128\148 diagnostics\n" ..
+        "|cFF555555/hc debug|r \226\128\148 detailed debug output\n" ..
+        "|cFF555555/hc export|r  /  |cFF555555/hc import|r \226\128\148 profile sharing\n" ..
+        "|cFF555555/hc reset|r  \226\128\148 restore defaults\n" ..
+        "|cFF555555Key Bindings|r \226\128\148 ESC > Key Bindings > HideChat\n" ..
+        "|cFF555555Hold to Peek|r \226\128\148 bindable key, shows chat while held"
     )
 
-    content:SetHeight(math.abs(Y) + 90)
+    content:SetHeight(math.abs(Y) + 130)
 
-    -- Only now promote to upvalue — if anything above errored,
+    -- Only now promote to upvalue - if anything above errored,
     -- frame stays nil and ToggleConfig will retry InitConfig.
     frame = f
     frame:Hide()
@@ -692,6 +788,16 @@ local function Refresh()
         for i, n in ipairs(names) do if n == cur then idx = i; break end end
         local count = #names > 0 and (" |cFF888888(" .. idx .. "/" .. #names .. ")|r") or ""
         widgets.profLabel:SetText("Active: |cFFFFFFFF" .. cur .. "|r" .. count)
+    end
+    -- Update spec note
+    if widgets.specNote and GetSpecialization then
+        local specIdx = GetSpecialization()
+        local bound = HideChatDB.specProfiles and specIdx and HideChatDB.specProfiles[specIdx]
+        if bound then
+            widgets.specNote:SetText("|cFF888888Spec " .. specIdx .. " -> " .. bound .. "|r")
+        else
+            widgets.specNote:SetText("|cFF555555No spec binding|r")
+        end
     end
     RefreshDeps()
 end

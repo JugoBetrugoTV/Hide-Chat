@@ -5,6 +5,7 @@ local addonName, ns = ...
 ---------------------------------------------------------------------------
 BINDING_HEADER_HIDECHAT = "HideChat"
 BINDING_NAME_HIDECHAT_TOGGLE = "Toggle Chat Visibility"
+BINDING_NAME_HIDECHAT_PEEK   = "Hold to Peek"
 
 ---------------------------------------------------------------------------
 -- Default saved-variable values
@@ -20,18 +21,22 @@ local defaults = {
     fadeDuration     = 1.0,
     alphaMode        = true,
     -- Appearance
-    opacity          = 0,               -- 0 = fully hidden, 0.01‑1.0 = partial
+    opacity          = 0,               -- 0 = fully hidden, 0.01-1.0 = partial
     mouseoverReveal  = true,
+    colorblind       = false,           -- shape-based + high-contrast colours
     -- Automation
     inactivityTimer  = 5,               -- seconds, 0 = disabled
     inactivityReshow = true,            -- show chat on new message
     instanceHide     = true,
     instanceTypes    = { party = true, raid = true, pvp = true, arena = false, scenario = true },
+    raidAutoShow     = true,            -- show on ready-check / encounter
     screenshotHide   = false,
     -- Chat
     whisperNotify    = true,
     whisperPass      = true,            -- forward whispers to UIErrorsFrame
+    whisperSound     = true,            -- play sound on whisper while hidden
     keepCombatLog    = false,
+    scrollToRecent   = true,            -- scroll to bottom on unhide
     -- Minimap
     showMinimap      = true,
     minimapPos       = 220,             -- degrees around minimap ring
@@ -39,6 +44,10 @@ local defaults = {
     configPos        = nil,             -- saved position {point,x,y}
     -- Profiles (internal)
     profiles         = nil,             -- populated on first load
+    specProfiles     = nil,             -- {[specIndex] = "profileName"}
+    -- Per-zone state
+    zoneMemory       = nil,             -- {[mapID] = true/false}
+    zoneMemoryEnabled = false,
 }
 
 ---------------------------------------------------------------------------
@@ -47,7 +56,7 @@ local defaults = {
 ns.isHidden       = false
 ns.mouseoverActive = false
 ns.defaults       = defaults
-ns.version        = "1.3.0"
+ns.version        = "1.4.0"
 
 -- Named constants (avoids magic numbers scattered across files)
 ns.BUTTON_DEFAULT       = { point = "BOTTOMLEFT", x = 4, y = 165 }
@@ -56,6 +65,7 @@ ns.MINIMAP_DEFAULT_ANGLE = 220
 ns.FADE_TICK            = 0.016
 ns.NOTIF_DISPLAY        = 1.5
 ns.NOTIF_FADE           = 1.0
+ns.NOTIF_COOLDOWN       = 0.5          -- debounce notifications
 
 -- Shorthand: set a solid-colour texture
 -- Accepts (tex, r, g, b [,a])  OR  (tex, {r,g,b} [,a])
@@ -80,7 +90,14 @@ do
     end
 end
 
--- Invisible anchor – anything parented here is invisible & non-interactive
+---------------------------------------------------------------------------
+-- Easing functions
+---------------------------------------------------------------------------
+function ns.EaseInOutSine(t)
+    return -(math.cos(math.pi * t) - 1) / 2
+end
+
+-- Invisible anchor - anything parented here is invisible & non-interactive
 local anchor = CreateFrame("Frame", "HideChatAnchor", UIParent)
 anchor:Hide()
 
@@ -91,7 +108,8 @@ local suppressAlpha = false
 local activeFade    = nil
 
 ---------------------------------------------------------------------------
--- Custom status notification (manual fade – immune to duplicate suppression)
+-- Custom status notification (manual fade - immune to duplicate suppression)
+-- With debounce: max 1 notification per NOTIF_COOLDOWN seconds
 ---------------------------------------------------------------------------
 local notifFrame = CreateFrame("Frame", nil, UIParent)
 notifFrame:SetSize(500, 30)
@@ -102,8 +120,13 @@ notifText:SetPoint("CENTER")
 notifFrame:Hide()
 
 local notifTimer
+local lastNotifTime = 0
 
 local function ShowNotification(text)
+    local now = GetTime()
+    if now - lastNotifTime < ns.NOTIF_COOLDOWN then return end
+    lastNotifTime = now
+
     notifText:SetText(text)
     notifFrame:SetAlpha(1)
     notifFrame:Show()
@@ -225,7 +248,7 @@ local function CancelFade()
 end
 
 ---------------------------------------------------------------------------
--- METHOD A – Reparent (default, most robust)
+-- METHOD A - Reparent (default, most robust)
 ---------------------------------------------------------------------------
 local function ReparentHide()
     for _, el in ipairs(ns.GetChatElements()) do
@@ -263,7 +286,7 @@ local function ReparentShow()
 end
 
 ---------------------------------------------------------------------------
--- METHOD B – Alpha mode (compat with chat addons / opacity > 0)
+-- METHOD B - Alpha mode (compat with chat addons / opacity > 0)
 ---------------------------------------------------------------------------
 local function AlphaHide()
     local tgt = HideChatDB.opacity or 0
@@ -321,7 +344,7 @@ local function UseAlphaMethod()
 end
 
 ---------------------------------------------------------------------------
--- Fade helper
+-- Fade helper (with easing support)
 ---------------------------------------------------------------------------
 local function Fade(from, to, duration, onDone)
     CancelFade()
@@ -330,11 +353,13 @@ local function Fade(from, to, duration, onDone)
     activeFade = C_Timer.NewTicker(ns.FADE_TICK, function()
         elapsed = elapsed + ns.FADE_TICK
         local p = math.min(elapsed / duration, 1)
+        -- Apply easing
+        p = ns.EaseInOutSine(p)
         local a = from + (to - from) * p
         suppressAlpha = true
         for _, el in ipairs(elements) do el:SetAlpha(a) end
         suppressAlpha = false
-        if p >= 1 then
+        if elapsed >= duration then
             CancelFade()
             if onDone then onDone() end
         end
@@ -356,6 +381,19 @@ local function InitEditBoxBlock()
             end
         end
     end)
+end
+
+---------------------------------------------------------------------------
+-- Scroll chat frames to bottom on unhide
+---------------------------------------------------------------------------
+local function ScrollChatToRecent()
+    if not HideChatDB.scrollToRecent then return end
+    for i = 1, NUM_CHAT_WINDOWS do
+        local cf = _G["ChatFrame" .. i]
+        if cf and cf:IsShown() and cf.ScrollToBottom then
+            cf:ScrollToBottom()
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -387,6 +425,38 @@ function ns.MouseoverHide()
 end
 
 ---------------------------------------------------------------------------
+-- Per-zone memory helpers
+---------------------------------------------------------------------------
+local function GetCurrentZoneID()
+    if C_Map and C_Map.GetBestMapForUnit then
+        return C_Map.GetBestMapForUnit("player")
+    end
+    return nil
+end
+
+local function SaveZoneState()
+    if not HideChatDB.zoneMemoryEnabled then return end
+    local zoneID = GetCurrentZoneID()
+    if not zoneID then return end
+    if not HideChatDB.zoneMemory then HideChatDB.zoneMemory = {} end
+    HideChatDB.zoneMemory[zoneID] = ns.isHidden
+end
+
+local function ApplyZoneState()
+    if not HideChatDB.zoneMemoryEnabled then return end
+    local zoneID = GetCurrentZoneID()
+    if not zoneID then return end
+    if not HideChatDB.zoneMemory then return end
+    local state = HideChatDB.zoneMemory[zoneID]
+    if state == nil then return end  -- no memory for this zone
+    if state and not ns.isHidden then
+        ns.HideChat(true)
+    elseif not state and ns.isHidden then
+        ns.ShowChat(true)
+    end
+end
+
+---------------------------------------------------------------------------
 -- Public hide / show API
 ---------------------------------------------------------------------------
 function ns.HideChat(silent)
@@ -405,6 +475,7 @@ function ns.HideChat(silent)
         if ns.UpdateButton  then ns.UpdateButton()  end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
         if ns.OnChatHidden  then ns.OnChatHidden()  end
+        SaveZoneState()
     end
 
     if HideChatDB.fade and HideChatDB.fadeDuration > 0 then
@@ -430,6 +501,9 @@ function ns.ShowChat(silent)
         Fade(from, 1, HideChatDB.fadeDuration)
     end
 
+    -- Scroll to most recent messages
+    ScrollChatToRecent()
+
     if not silent then
         ShowNotification("|cFF2DD4BFHideChat|r  |cFF2DD4BFChat visible|r")
     end
@@ -437,11 +511,46 @@ function ns.ShowChat(silent)
     if ns.UpdateMinimap then ns.UpdateMinimap() end
     if ns.StopBlink     then ns.StopBlink()     end
     if ns.OnChatShown   then ns.OnChatShown()   end
+    SaveZoneState()
 end
 
 function HideChat_Toggle()
     ns._combatHid = false
     if ns.isHidden then ns.ShowChat() else ns.HideChat() end
+end
+
+---------------------------------------------------------------------------
+-- Hold-to-Peek (show while key held, hide on release)
+---------------------------------------------------------------------------
+ns._peekActive = false
+
+function HideChat_PeekDown()
+    if not ns.isHidden then return end
+    ns._peekActive = true
+    ns.mouseoverActive = true
+    if not UseAlphaMethod() then
+        for el, parent in pairs(savedParents) do
+            el:SetParent(parent)
+            el:SetAlpha(0.85)
+            el:Show()
+        end
+    else
+        ns.SetElementsAlpha(0.85, true)
+    end
+end
+
+function HideChat_PeekUp()
+    if not ns._peekActive then return end
+    ns._peekActive = false
+    ns.mouseoverActive = false
+    local tgt = HideChatDB.opacity or 0
+    if not UseAlphaMethod() then
+        for el, _ in pairs(savedParents) do
+            el:SetParent(anchor)
+        end
+    else
+        ns.SetElementsAlpha(tgt, tgt > 0)
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -499,13 +608,24 @@ end
 function ns.LoadProfile(name)
     local p = HideChatDB.profiles and HideChatDB.profiles[name]
     if not p then return false end
-    -- Show chat before switching (avoids orphaned frames)
-    if ns.isHidden then ns.ShowChat(true) end
+    -- Crossfade: silently transition without flicker
+    local wasHidden = ns.isHidden
+    if wasHidden then
+        -- Directly restore frames without fade
+        CancelFade()
+        ns.mouseoverActive = false
+        if UseAlphaMethod() then AlphaShow() else ReparentShow() end
+        ns.isHidden = false
+    end
     for k, v in pairs(p) do HideChatDB[k] = v end
     if HideChatCharDB then HideChatCharDB.activeProfile = name end
-    -- Re-hide if the new profile says so
+    -- Re-hide if the new profile says so (no flicker: instant)
     if HideChatDB.hidden then
-        C_Timer.After(0.1, function() ns.HideChat(true) end)
+        ns.isHidden = false  -- ensure HideChat() actually runs
+        local savedFade = HideChatDB.fade
+        HideChatDB.fade = false
+        ns.HideChat(true)
+        HideChatDB.fade = savedFade
     end
     if ns.UpdateButton then ns.UpdateButton() end
     return true
@@ -542,12 +662,28 @@ function ns.RenameProfile(oldName, newName)
     if HideChatCharDB and HideChatCharDB.activeProfile == oldName then
         HideChatCharDB.activeProfile = newName
     end
+    -- Update spec profile bindings
+    if HideChatDB.specProfiles then
+        for spec, pName in pairs(HideChatDB.specProfiles) do
+            if pName == oldName then
+                HideChatDB.specProfiles[spec] = newName
+            end
+        end
+    end
     return true
 end
 
 function ns.DeleteProfile(name)
     if name == "Default" then return end
     if HideChatDB.profiles then HideChatDB.profiles[name] = nil end
+    -- Clean up spec bindings
+    if HideChatDB.specProfiles then
+        for spec, pName in pairs(HideChatDB.specProfiles) do
+            if pName == name then
+                HideChatDB.specProfiles[spec] = nil
+            end
+        end
+    end
     if HideChatCharDB and HideChatCharDB.activeProfile == name then
         ns.LoadProfile("Default")
     end
@@ -565,14 +701,149 @@ function ns.GetProfileNames()
 end
 
 ---------------------------------------------------------------------------
--- Database initialisation  (handles v1.1 → v1.2 migration)
+-- Profile import / export (Base64 serialisation)
+---------------------------------------------------------------------------
+do
+    local b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+    local function ToBase64(str)
+        local out = {}
+        local pad = 3 - (#str % 3)
+        if pad == 3 then pad = 0 end
+        str = str .. string.rep("\0", pad)
+        for i = 1, #str, 3 do
+            local a, b, c = str:byte(i, i + 2)
+            local n = a * 65536 + b * 256 + c
+            out[#out + 1] = b64:sub(math.floor(n / 262144) % 64 + 1, math.floor(n / 262144) % 64 + 1)
+            out[#out + 1] = b64:sub(math.floor(n / 4096) % 64 + 1, math.floor(n / 4096) % 64 + 1)
+            out[#out + 1] = b64:sub(math.floor(n / 64) % 64 + 1, math.floor(n / 64) % 64 + 1)
+            out[#out + 1] = b64:sub(n % 64 + 1, n % 64 + 1)
+        end
+        for i = 1, pad do out[#out - i + 1] = "=" end
+        return table.concat(out)
+    end
+
+    local function FromBase64(str)
+        str = str:gsub("[^A-Za-z0-9+/=]", "")
+        local out = {}
+        local padCount = select(2, str:gsub("=", ""))
+        str = str:gsub("=", "A")
+        for i = 1, #str, 4 do
+            local a = b64:find(str:sub(i, i)) - 1
+            local b = b64:find(str:sub(i + 1, i + 1)) - 1
+            local c = b64:find(str:sub(i + 2, i + 2)) - 1
+            local d = b64:find(str:sub(i + 3, i + 3)) - 1
+            if not a or not b or not c or not d then break end
+            local n = a * 262144 + b * 4096 + c * 64 + d
+            out[#out + 1] = string.char(math.floor(n / 65536) % 256)
+            out[#out + 1] = string.char(math.floor(n / 256) % 256)
+            out[#out + 1] = string.char(n % 256)
+        end
+        local result = table.concat(out)
+        if padCount > 0 then result = result:sub(1, -(padCount + 1)) end
+        return result
+    end
+
+    -- Simple Lua table serialiser (flat key-value only, handles subtables)
+    local function Serialize(tbl)
+        local parts = {}
+        for k, v in pairs(tbl) do
+            if type(v) == "table" then
+                parts[#parts + 1] = k .. "={" .. Serialize(v) .. "}"
+            elseif type(v) == "boolean" then
+                parts[#parts + 1] = k .. "=" .. (v and "T" or "F")
+            elseif type(v) == "number" then
+                parts[#parts + 1] = k .. "=" .. tostring(v)
+            elseif type(v) == "string" then
+                parts[#parts + 1] = k .. "=S" .. v
+            end
+        end
+        return table.concat(parts, "|")
+    end
+
+    local function Deserialize(str)
+        local tbl = {}
+        -- Parse key=value pairs separated by |
+        local pos = 1
+        while pos <= #str do
+            local eqPos = str:find("=", pos)
+            if not eqPos then break end
+            local key = str:sub(pos, eqPos - 1)
+            local nextChar = str:sub(eqPos + 1, eqPos + 1)
+            if nextChar == "{" then
+                -- Find matching brace
+                local depth, endPos = 1, eqPos + 2
+                while endPos <= #str and depth > 0 do
+                    if str:sub(endPos, endPos) == "{" then depth = depth + 1
+                    elseif str:sub(endPos, endPos) == "}" then depth = depth - 1 end
+                    endPos = endPos + 1
+                end
+                local inner = str:sub(eqPos + 2, endPos - 2)
+                tbl[key] = Deserialize(inner)
+                pos = endPos
+                if str:sub(pos, pos) == "|" then pos = pos + 1 end
+            else
+                local pipePos = str:find("|", eqPos + 1)
+                local val = pipePos and str:sub(eqPos + 1, pipePos - 1) or str:sub(eqPos + 1)
+                if val == "T" then tbl[key] = true
+                elseif val == "F" then tbl[key] = false
+                elseif val:sub(1, 1) == "S" then tbl[key] = val:sub(2)
+                else tbl[key] = tonumber(val) end
+                pos = pipePos and (pipePos + 1) or (#str + 1)
+            end
+        end
+        return tbl
+    end
+
+    function ns.ExportProfile(name)
+        local p = HideChatDB.profiles and HideChatDB.profiles[name or HideChatCharDB.activeProfile]
+        if not p then return nil end
+        local data = Serialize(p)
+        return "HC1:" .. ToBase64(data)
+    end
+
+    function ns.ImportProfile(str, targetName)
+        if not str or not str:match("^HC1:") then
+            print("|cFF2DD4BFHideChat:|r Invalid import string.")
+            return false
+        end
+        local encoded = str:sub(5)
+        local ok, data = pcall(FromBase64, encoded)
+        if not ok or not data or data == "" then
+            print("|cFF2DD4BFHideChat:|r Failed to decode import string.")
+            return false
+        end
+        local ok2, tbl = pcall(Deserialize, data)
+        if not ok2 or type(tbl) ~= "table" then
+            print("|cFF2DD4BFHideChat:|r Failed to parse import data.")
+            return false
+        end
+        -- Validate: must have at least one known key
+        local valid = false
+        for k in pairs(tbl) do
+            if settingKeys[k] then valid = true; break end
+        end
+        if not valid then
+            print("|cFF2DD4BFHideChat:|r Import data contains no valid settings.")
+            return false
+        end
+        targetName = targetName or ("Imported " .. date("%H:%M"))
+        if not HideChatDB.profiles then HideChatDB.profiles = {} end
+        HideChatDB.profiles[targetName] = tbl
+        print("|cFF2DD4BFHideChat:|r Profile \"" .. targetName .. "\" imported successfully.")
+        return true
+    end
+end
+
+---------------------------------------------------------------------------
+-- Database initialisation  (handles v1.1 -> v1.2 -> v1.4 migration)
 ---------------------------------------------------------------------------
 local function InitDB()
     if not HideChatDB then HideChatDB = {} end
 
     -- Flat defaults merge (skip tables & profiles key)
     for k, v in pairs(defaults) do
-        if k ~= "profiles" and k ~= "instanceTypes" then
+        if k ~= "profiles" and k ~= "instanceTypes" and k ~= "specProfiles" and k ~= "zoneMemory" then
             if HideChatDB[k] == nil then HideChatDB[k] = v end
         end
     end
@@ -587,7 +858,17 @@ local function InitDB()
         end
     end
 
-    -- Profile migration: existing flat settings → "Default" profile
+    -- Spec profiles sub-table
+    if not HideChatDB.specProfiles then
+        HideChatDB.specProfiles = {}
+    end
+
+    -- Zone memory sub-table
+    if not HideChatDB.zoneMemory then
+        HideChatDB.zoneMemory = {}
+    end
+
+    -- Profile migration: existing flat settings -> "Default" profile
     if not HideChatDB.profiles then
         HideChatDB.profiles = {}
         local p = {}
@@ -611,7 +892,7 @@ local function InitDB()
 end
 
 ---------------------------------------------------------------------------
--- Events: login + combat
+-- Events: login + combat + raid events + spec change + zone change
 ---------------------------------------------------------------------------
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
@@ -638,6 +919,13 @@ events:SetScript("OnEvent", function(_, event)
         if ns.InitConfig   then SafeCall("InitConfig",   ns.InitConfig)   end
         if ns.InitFeatures then SafeCall("InitFeatures", ns.InitFeatures) end
 
+        -- Register additional events after login
+        pcall(function() events:RegisterEvent("READY_CHECK") end)
+        pcall(function() events:RegisterEvent("ENCOUNTER_START") end)
+        pcall(function() events:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED") end)
+        pcall(function() events:RegisterEvent("ZONE_CHANGED_NEW_AREA") end)
+        pcall(function() events:RegisterEvent("ZONE_CHANGED") end)
+
     elseif event == "PLAYER_REGEN_DISABLED" then
         if HideChatDB.combat and not ns.isHidden then
             ns._combatHid = true
@@ -649,8 +937,117 @@ events:SetScript("OnEvent", function(_, event)
             ns._combatHid = false
             ns.ShowChat(true)
         end
+
+    elseif event == "READY_CHECK" then
+        if HideChatDB.raidAutoShow and ns.isHidden then
+            ns._raidAutoShowed = true
+            ns.ShowChat(true)
+        end
+
+    elseif event == "ENCOUNTER_START" then
+        -- Re-hide chat if it was auto-shown by ready check
+        if ns._raidAutoShowed and not ns.isHidden then
+            ns._raidAutoShowed = false
+            ns.HideChat(true)
+        end
+
+    elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        -- Spec-bound profiles
+        if HideChatDB.specProfiles then
+            local specIndex = GetSpecialization and GetSpecialization() or nil
+            if specIndex and HideChatDB.specProfiles[specIndex] then
+                local targetProfile = HideChatDB.specProfiles[specIndex]
+                if targetProfile ~= (HideChatCharDB.activeProfile or "Default") then
+                    ns.SaveCurrentProfile()
+                    ns.LoadProfile(targetProfile)
+                    if ns.RefreshConfig then ns.RefreshConfig() end
+                end
+            end
+        end
+
+    elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" then
+        -- Apply per-zone memory
+        C_Timer.After(0.5, function()
+            ApplyZoneState()
+        end)
     end
 end)
+
+---------------------------------------------------------------------------
+-- Debug output (/hc debug)
+---------------------------------------------------------------------------
+function ns.PrintDebug()
+    local mode = UseAlphaMethod() and "alpha" or "reparent"
+    print("|cFF2DD4BF--- HideChat v" .. ns.version .. " Debug ---|r")
+    print("  State: " .. (ns.isHidden and "|cFFFF4444HIDDEN|r" or "|cFF44FF44VISIBLE|r"))
+    print("  Mode: " .. mode)
+    print("  Profile: " .. (HideChatCharDB.activeProfile or "Default"))
+
+    -- Spec profile bindings
+    if HideChatDB.specProfiles then
+        local any = false
+        for spec, pName in pairs(HideChatDB.specProfiles) do
+            if not any then print("  Spec Profiles:"); any = true end
+            print("    Spec " .. spec .. " -> " .. pName)
+        end
+    end
+
+    -- Managed frames
+    local elements = ns.GetChatElements()
+    print("  Managed frames: " .. #elements)
+    for i, el in ipairs(elements) do
+        local name = el:GetName() or ("<unnamed:" .. tostring(el) .. ">")
+        local alpha = string.format("%.2f", el:GetAlpha())
+        local parent = el:GetParent() and (el:GetParent():GetName() or "unnamed") or "nil"
+        print("    " .. i .. ". " .. name .. " (a=" .. alpha .. " p=" .. parent .. ")")
+    end
+
+    -- Third-party detection
+    local addons = {}
+    local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+    if isLoaded then
+        if pcall(isLoaded, "Prat-3.0") and isLoaded("Prat-3.0") then addons[#addons + 1] = "Prat-3.0" end
+        if pcall(isLoaded, "Chattynator") and isLoaded("Chattynator") then addons[#addons + 1] = "Chattynator" end
+    end
+    if _G["ElvUI"]      then addons[#addons + 1] = "ElvUI" end
+    if _G["GlassFrame"] then addons[#addons + 1] = "Glass" end
+    print("  Chat addons: " .. (#addons > 0 and table.concat(addons, ", ") or "none"))
+
+    -- Flags
+    print("  Flags:")
+    print("    combatHid=" .. tostring(ns._combatHid or false))
+    print("    mouseoverActive=" .. tostring(ns.mouseoverActive))
+    print("    peekActive=" .. tostring(ns._peekActive))
+    print("    hasWhisper=" .. tostring(ns._hasWhisper or false))
+    print("    raidAutoShowed=" .. tostring(ns._raidAutoShowed or false))
+
+    -- Active timers
+    print("  Settings:")
+    print("    fade=" .. tostring(HideChatDB.fade) .. " dur=" .. string.format("%.1f", HideChatDB.fadeDuration))
+    print("    opacity=" .. math.floor((HideChatDB.opacity or 0) * 100) .. "%")
+    print("    combat=" .. tostring(HideChatDB.combat) .. " restore=" .. tostring(HideChatDB.combatRestore))
+    print("    inactivity=" .. (HideChatDB.inactivityTimer or 0) .. "s")
+    print("    mouseoverReveal=" .. tostring(HideChatDB.mouseoverReveal))
+    print("    raidAutoShow=" .. tostring(HideChatDB.raidAutoShow))
+    print("    whisperSound=" .. tostring(HideChatDB.whisperSound))
+    print("    colorblind=" .. tostring(HideChatDB.colorblind))
+    print("    scrollToRecent=" .. tostring(HideChatDB.scrollToRecent))
+    print("    zoneMemory=" .. tostring(HideChatDB.zoneMemoryEnabled))
+
+    -- Zone memory
+    if HideChatDB.zoneMemoryEnabled and HideChatDB.zoneMemory then
+        local count = 0
+        for _ in pairs(HideChatDB.zoneMemory) do count = count + 1 end
+        print("    zoneMemory entries: " .. count)
+        local zoneID = GetCurrentZoneID()
+        if zoneID then
+            local state = HideChatDB.zoneMemory[zoneID]
+            print("    currentZone=" .. zoneID .. " state=" .. tostring(state))
+        end
+    end
+
+    print("|cFF2DD4BF--- End Debug ---|r")
+end
 
 ---------------------------------------------------------------------------
 -- Slash commands
@@ -669,6 +1066,9 @@ SlashCmdList["HIDECHAT"] = function(msg)
     elseif msg == "hide" or msg == "off" then
         if not ns.isHidden then ns.HideChat() end
 
+    elseif msg == "debug" then
+        ns.PrintDebug()
+
     elseif msg == "status" then
         local mode = UseAlphaMethod() and "alpha" or "reparent"
         print("|cFF00FF00HideChat v" .. ns.version .. "|r")
@@ -682,6 +1082,9 @@ SlashCmdList["HIDECHAT"] = function(msg)
         if HideChatDB.inactivityTimer > 0 then print("  Inactivity: " .. HideChatDB.inactivityTimer .. "s") end
         if HideChatDB.mouseoverReveal then print("  Mouseover reveal: on") end
         if HideChatDB.keepCombatLog   then print("  Combat log kept: on") end
+        if HideChatDB.raidAutoShow    then print("  Raid auto-show: on") end
+        if HideChatDB.whisperSound    then print("  Whisper sound: on") end
+        if HideChatDB.zoneMemoryEnabled then print("  Zone memory: on") end
         local addons = {}
         local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
         if isLoaded then
@@ -692,12 +1095,32 @@ SlashCmdList["HIDECHAT"] = function(msg)
         if _G["GlassFrame"]       then addons[#addons + 1] = "Glass" end
         if #addons > 0 then print("  Chat addons: " .. table.concat(addons, ", ")) end
 
+    elseif msg:match("^export") then
+        local name = msg:match("^export%s+(.+)") or HideChatCharDB.activeProfile
+        local str = ns.ExportProfile(name)
+        if str then
+            print("|cFF2DD4BFHideChat:|r Export string for \"" .. name .. "\":")
+            print(str)
+        else
+            print("|cFF2DD4BFHideChat:|r Profile not found.")
+        end
+
+    elseif msg:match("^import") then
+        local rest = msg:match("^import%s+(.+)")
+        if rest then
+            ns.ImportProfile(rest)
+        else
+            print("|cFF2DD4BFHideChat:|r Usage: /hc import HC1:...")
+        end
+
     elseif msg == "reset" then
         if ns.isHidden then ns.ShowChat(true) end
         for k, v in pairs(defaults) do
             if k ~= "profiles" then HideChatDB[k] = v end
         end
         HideChatDB.instanceTypes = { party = true, raid = true, pvp = true, arena = false, scenario = true }
+        HideChatDB.specProfiles = {}
+        HideChatDB.zoneMemory = {}
         if ns.UpdateButton  then ns.UpdateButton()  end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
         if ns.RefreshConfig then ns.RefreshConfig() end
