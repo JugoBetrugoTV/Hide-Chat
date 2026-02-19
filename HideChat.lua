@@ -56,7 +56,7 @@ local defaults = {
 ns.isHidden       = false
 ns.mouseoverActive = false
 ns.defaults       = defaults
-ns.version        = "1.4.0"
+ns.version        = "1.4.1"
 
 -- Named constants (avoids magic numbers scattered across files)
 ns.BUTTON_DEFAULT       = { point = "BOTTOMLEFT", x = 4, y = 165 }
@@ -275,12 +275,12 @@ local function ReparentShow()
                 if not InCombatLockdown() then
                     ticker:Cancel()
                     if FCF_SelectDockFrame and ChatFrame1 then
-                        FCF_SelectDockFrame(ChatFrame1)
+                        pcall(FCF_SelectDockFrame, ChatFrame1)
                     end
                 end
             end)
         else
-            FCF_SelectDockFrame(ChatFrame1)
+            pcall(FCF_SelectDockFrame, ChatFrame1)
         end
     end
 end
@@ -430,6 +430,10 @@ end
 local function GetCurrentZoneID()
     if C_Map and C_Map.GetBestMapForUnit then
         return C_Map.GetBestMapForUnit("player")
+    end
+    -- Classic fallback
+    if GetCurrentMapAreaID then
+        return GetCurrentMapAreaID()
     end
     return nil
 end
@@ -608,12 +612,14 @@ end
 function ns.LoadProfile(name)
     local p = HideChatDB.profiles and HideChatDB.profiles[name]
     if not p then return false end
+    -- Cancel any active fade before switching profiles to prevent race
+    CancelFade()
     -- Crossfade: silently transition without flicker
     local wasHidden = ns.isHidden
     if wasHidden then
         -- Directly restore frames without fade
-        CancelFade()
         ns.mouseoverActive = false
+        ns._peekActive = false
         if UseAlphaMethod() then AlphaShow() else ReparentShow() end
         ns.isHidden = false
     end
@@ -725,23 +731,36 @@ do
 
     local function FromBase64(str)
         str = str:gsub("[^A-Za-z0-9+/=]", "")
+        if #str == 0 then return "" end
         local out = {}
         local padCount = select(2, str:gsub("=", ""))
         str = str:gsub("=", "A")
         for i = 1, #str, 4 do
-            local a = b64:find(str:sub(i, i)) - 1
-            local b = b64:find(str:sub(i + 1, i + 1)) - 1
-            local c = b64:find(str:sub(i + 2, i + 2)) - 1
-            local d = b64:find(str:sub(i + 3, i + 3)) - 1
-            if not a or not b or not c or not d then break end
-            local n = a * 262144 + b * 4096 + c * 64 + d
+            local fa = b64:find(str:sub(i, i), 1, true)
+            local fb = b64:find(str:sub(i + 1, i + 1), 1, true)
+            local fc = b64:find(str:sub(i + 2, i + 2), 1, true)
+            local fd = b64:find(str:sub(i + 3, i + 3), 1, true)
+            if not fa or not fb or not fc or not fd then break end
+            local a, bv, c, d = fa - 1, fb - 1, fc - 1, fd - 1
+            local n = a * 262144 + bv * 4096 + c * 64 + d
             out[#out + 1] = string.char(math.floor(n / 65536) % 256)
             out[#out + 1] = string.char(math.floor(n / 256) % 256)
             out[#out + 1] = string.char(n % 256)
         end
         local result = table.concat(out)
-        if padCount > 0 then result = result:sub(1, -(padCount + 1)) end
+        if padCount > 0 and padCount < #result then
+            result = result:sub(1, -(padCount + 1))
+        end
         return result
+    end
+
+    -- Escape/unescape special chars so |, =, {, } inside strings don't
+    -- corrupt the serialised format (common with WoW colour codes like |cFF…).
+    local function EscapeStr(s)
+        return s:gsub("\\", "\\\\"):gsub("|", "\\p"):gsub("=", "\\e"):gsub("{", "\\l"):gsub("}", "\\r")
+    end
+    local function UnescapeStr(s)
+        return s:gsub("\\r", "}"):gsub("\\l", "{"):gsub("\\e", "="):gsub("\\p", "|"):gsub("\\\\", "\\")
     end
 
     -- Simple Lua table serialiser (flat key-value only, handles subtables)
@@ -755,7 +774,7 @@ do
             elseif type(v) == "number" then
                 parts[#parts + 1] = k .. "=" .. tostring(v)
             elseif type(v) == "string" then
-                parts[#parts + 1] = k .. "=S" .. v
+                parts[#parts + 1] = k .. "=S" .. EscapeStr(v)
             end
         end
         return table.concat(parts, "|")
@@ -774,8 +793,9 @@ do
                 -- Find matching brace
                 local depth, endPos = 1, eqPos + 2
                 while endPos <= #str and depth > 0 do
-                    if str:sub(endPos, endPos) == "{" then depth = depth + 1
-                    elseif str:sub(endPos, endPos) == "}" then depth = depth - 1 end
+                    local ch = str:sub(endPos, endPos)
+                    if ch == "{" then depth = depth + 1
+                    elseif ch == "}" then depth = depth - 1 end
                     endPos = endPos + 1
                 end
                 local inner = str:sub(eqPos + 2, endPos - 2)
@@ -787,7 +807,7 @@ do
                 local val = pipePos and str:sub(eqPos + 1, pipePos - 1) or str:sub(eqPos + 1)
                 if val == "T" then tbl[key] = true
                 elseif val == "F" then tbl[key] = false
-                elseif val:sub(1, 1) == "S" then tbl[key] = val:sub(2)
+                elseif val:sub(1, 1) == "S" then tbl[key] = UnescapeStr(val:sub(2))
                 else tbl[key] = tonumber(val) end
                 pos = pipePos and (pipePos + 1) or (#str + 1)
             end

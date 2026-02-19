@@ -328,6 +328,7 @@ function ns.InitMinimapButton()
     minimapBtn:SetScript("OnUpdate", function(self)
         if not self._drag then return end
         local mx, my = Minimap:GetCenter()
+        if not mx or not my then return end
         local cx, cy = GetCursorPosition()
         local s = UIParent:GetEffectiveScale()
         HideChatDB.minimapPos = math.deg(math.atan2(cy/s - my, cx/s - mx))

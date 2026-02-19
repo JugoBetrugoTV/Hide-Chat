@@ -2,7 +2,7 @@
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (The Burning Crusade Classic Anniversary)
 ## Author: JugoBetrugoTV
-## Version: 1.4.0
+## Version: 1.4.1
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB

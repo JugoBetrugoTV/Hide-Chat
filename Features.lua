@@ -222,7 +222,7 @@ function ns.InitWhisper()
         ns._lastWhisperIsBNet = (event == "CHAT_MSG_BN_WHISPER")
 
         -- Passthrough: show whisper text in UIErrorsFrame
-        if HideChatDB.whisperPass then
+        if HideChatDB.whisperPass and UIErrorsFrame then
             local tag = (event == "CHAT_MSG_BN_WHISPER") and "[BNet] " or ""
             local line = "|cFFFF88FF" .. tag .. sender .. ":|r " .. text
             UIErrorsFrame:AddMessage(line, 1, 1, 1, 1, 5)
@@ -230,7 +230,8 @@ function ns.InitWhisper()
 
         -- Sound notification
         if HideChatDB.whisperSound then
-            PlaySound(3081, "Master")  -- SOUNDKIT.TELL_MESSAGE (whisper received)
+            local soundID = SOUNDKIT and SOUNDKIT.TELL_MESSAGE or 3081
+            PlaySound(soundID, "Master")
         end
 
         -- Notification: tell Button.lua to start blinking
@@ -286,10 +287,15 @@ end
 ---------------------------------------------------------------------------
 function ns.InitMinimapFallback()
     if not Minimap then return end
+    -- Cancel previous ticker if re-initialised (e.g. after /reload)
+    if ns._minimapFallbackTicker then
+        ns._minimapFallbackTicker:Cancel()
+        ns._minimapFallbackTicker = nil
+    end
     local minimapBtn = _G["HideChatMinimapButton"]
     -- Check periodically (every 2s) if minimap visibility changed
     local wasVisible = Minimap:IsVisible()
-    C_Timer.NewTicker(2, function()
+    ns._minimapFallbackTicker = C_Timer.NewTicker(2, function()
         minimapBtn = minimapBtn or _G["HideChatMinimapButton"]
         if not minimapBtn then return end
         local visible = Minimap:IsVisible()

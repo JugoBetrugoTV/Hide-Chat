@@ -403,7 +403,11 @@ function ns.InitConfig()
     local statusDot = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     statusDot:SetPoint("TOPRIGHT", -42, -16)
     widgets.statusDot = statusDot
-    f:SetScript("OnUpdate", function()
+    local statusElapsed = 0
+    f:SetScript("OnUpdate", function(_, dt)
+        statusElapsed = statusElapsed + dt
+        if statusElapsed < 0.25 then return end
+        statusElapsed = 0
         if not widgets.statusDot then return end
         if ns.isHidden then
             widgets.statusDot:SetText("|cFFE06666\226\151\143  Hidden|r")
