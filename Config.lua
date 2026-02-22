@@ -289,7 +289,6 @@ end
 ---------------------------------------------------------------------------
 -- Profile popups
 ---------------------------------------------------------------------------
-StaticPopupDialogs = StaticPopupDialogs or {}
 StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
     text = "HideChat - New profile name:",
     button1 = "Create", button2 = "Cancel", hasEditBox = true,
