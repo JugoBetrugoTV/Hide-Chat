@@ -1,4 +1,5 @@
 local addonName, ns = ...
+local L = ns.L
 
 ---------------------------------------------------------------------------
 -- Initialise all feature modules (called from PLAYER_LOGIN)
@@ -244,7 +245,7 @@ end
 -- Quick-reply: open edit box with /w <sender> pre-filled
 function ns.QuickReply()
     if not ns._lastWhisperSender then
-        print("|cFF2DD4BFHideChat:|r No recent whisper to reply to.")
+        print("|cFF2DD4BFHideChat:|r " .. L["No recent whisper to reply to."])
         return
     end
     -- Show chat first if hidden

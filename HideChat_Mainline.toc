@@ -1,6 +1,7 @@
 ## Interface: 120000
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Midnight)
+## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（午夜）
 ## Author: JugoBetrugoTV
 ## Version: 1.4.1
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
@@ -10,6 +11,7 @@
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB
 
+Localization.lua
 HideChat.lua
 Features.lua
 Button.lua

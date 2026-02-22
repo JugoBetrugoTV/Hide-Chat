@@ -1,4 +1,5 @@
 local addonName, ns = ...
+local L = ns.L
 
 local frame, content, checkboxes, widgets
 
@@ -290,8 +291,8 @@ end
 -- Profile popups
 ---------------------------------------------------------------------------
 StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
-    text = "HideChat - New profile name:",
-    button1 = "Create", button2 = "Cancel", hasEditBox = true,
+    text = L["HideChat - New profile name:"],
+    button1 = L["Create"], button2 = L["Cancel"], hasEditBox = true,
     OnAccept = function(self)
         local eb = self.EditBox or self.editBox
         local n = eb and eb:GetText()
@@ -304,8 +305,8 @@ StaticPopupDialogs["HIDECHAT_NEW_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_COPY_PROFILE"] = {
-    text = "HideChat - Copy current profile to:",
-    button1 = "Copy", button2 = "Cancel", hasEditBox = true,
+    text = L["HideChat - Copy current profile to:"],
+    button1 = L["Copy"], button2 = L["Cancel"], hasEditBox = true,
     OnShow = function(self)
         local eb = self.EditBox or self.editBox
         if eb then eb:SetText((HideChatCharDB.activeProfile or "Default") .. " (Copy)") end
@@ -322,8 +323,8 @@ StaticPopupDialogs["HIDECHAT_COPY_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_RENAME_PROFILE"] = {
-    text = "HideChat - Rename profile \"%s\" to:",
-    button1 = "Rename", button2 = "Cancel", hasEditBox = true,
+    text = L["HideChat - Rename profile \"%s\" to:"],
+    button1 = L["Rename"], button2 = L["Cancel"], hasEditBox = true,
     OnShow = function(self)
         local eb = self.EditBox or self.editBox
         if eb then eb:SetText(HideChatCharDB.activeProfile or "") end
@@ -340,8 +341,8 @@ StaticPopupDialogs["HIDECHAT_RENAME_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
-    text = "HideChat - Delete profile \"%s\"?",
-    button1 = "Delete", button2 = "Cancel",
+    text = L["HideChat - Delete profile \"%s\"?"],
+    button1 = L["Delete"], button2 = L["Cancel"],
     OnAccept = function()
         ns.DeleteProfile(HideChatCharDB.activeProfile)
         if ns.ToggleConfig then ns.ToggleConfig(); ns.ToggleConfig() end
@@ -349,16 +350,16 @@ StaticPopupDialogs["HIDECHAT_DELETE_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_RESET_ALL"] = {
-    text = "HideChat - Reset all settings to defaults?",
-    button1 = "Reset", button2 = "Cancel",
+    text = L["HideChat - Reset all settings to defaults?"],
+    button1 = L["Reset"], button2 = L["Cancel"],
     OnAccept = function()
         SlashCmdList["HIDECHAT"]("reset")
     end,
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_IMPORT_PROFILE"] = {
-    text = "HideChat - Paste import string:",
-    button1 = "Import", button2 = "Cancel", hasEditBox = true,
+    text = L["HideChat - Paste import string:"],
+    button1 = L["Import"], button2 = L["Cancel"], hasEditBox = true,
     OnAccept = function(self)
         local eb = self.EditBox or self.editBox
         local str = eb and eb:GetText()
@@ -371,8 +372,8 @@ StaticPopupDialogs["HIDECHAT_IMPORT_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true,
 }
 StaticPopupDialogs["HIDECHAT_EXPORT_PROFILE"] = {
-    text = "HideChat - Export string (copy this):",
-    button1 = "OK", hasEditBox = true,
+    text = L["HideChat - Export string (copy this):"],
+    button1 = L["OK"], hasEditBox = true,
     OnShow = function(self)
         local eb = self.EditBox or self.editBox
         if eb then
@@ -443,7 +444,7 @@ function ns.InitConfig()
     -- Title
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 14, -10)
-    title:SetText("|cFF2DD4BFHideChat|r  |cFF6B7280Settings|r")
+    title:SetText("|cFF2DD4BFHideChat|r  |cFF6B7280" .. L["Settings"] .. "|r")
 
     -- Version
     local ver = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -465,10 +466,10 @@ function ns.InitConfig()
         statusElapsed = 0
         if ns.isHidden then
             sct(widgets.statusDotTex, 0.85, 0.30, 0.30, 1)
-            widgets.statusText:SetText("|cFFE06666Hidden|r")
+            widgets.statusText:SetText("|cFFE06666" .. L["Hidden"] .. "|r")
         else
             sct(widgets.statusDotTex, 0.18, 0.83, 0.75, 1)
-            widgets.statusText:SetText("|cFF2DD4BFVisible|r")
+            widgets.statusText:SetText("|cFF2DD4BF" .. L["Visible"] .. "|r")
         end
     end)
 
@@ -527,44 +528,44 @@ function ns.InitConfig()
     local Y    = 0
 
     ---- General ----------------------------------------------------------
-    local c1 = Card(content, "General", 0, Y, CW, 184)
+    local c1 = Card(content, L["General"], 0, Y, CW, 184)
     local y1 = -28
-    checkboxes.showButton = Checkbox(c1, "Show toggle button", PAD, y1,
+    checkboxes.showButton = Checkbox(c1, L["Show toggle button"], PAD, y1,
         "showButton", function() if ns.UpdateButton then ns.UpdateButton() end end)
     y1 = y1 - ROW
-    checkboxes.lockButton = Checkbox(c1, "Lock button position", PAD, y1, "lockButton")
+    checkboxes.lockButton = Checkbox(c1, L["Lock button position"], PAD, y1, "lockButton")
     y1 = y1 - ROW
-    Btn(c1, "Reset Position", PAD + 26, y1, 120, function()
+    Btn(c1, L["Reset Position"], PAD + 26, y1, 120, function()
         if ns.ResetButtonPos then ns.ResetButtonPos() end
     end)
     y1 = y1 - 30
-    checkboxes.showMinimap = Checkbox(c1, "Show minimap button", PAD, y1,
+    checkboxes.showMinimap = Checkbox(c1, L["Show minimap button"], PAD, y1,
         "showMinimap", function() if ns.UpdateMinimap then ns.UpdateMinimap() end end)
     y1 = y1 - ROW
-    Btn(c1, "Reset Minimap Pos", PAD + 26, y1, 130, function()
+    Btn(c1, L["Reset Minimap Pos"], PAD + 26, y1, 130, function()
         if ns.ResetMinimapPos then ns.ResetMinimapPos() end
     end)
     Y = Y - 184 - GAP
 
     ---- Combat -----------------------------------------------------------
-    local c2 = Card(content, "Combat", 0, Y, CW, 108)
+    local c2 = Card(content, L["Combat"], 0, Y, CW, 108)
     local y2 = -28
-    checkboxes.combat = Checkbox(c2, "Auto-hide in combat", PAD, y2,
+    checkboxes.combat = Checkbox(c2, L["Auto-hide in combat"], PAD, y2,
         "combat", function() RefreshDeps() end)
     y2 = y2 - ROW
-    checkboxes.combatRestore = Checkbox(c2, "Auto-show after combat", PAD, y2, "combatRestore")
+    checkboxes.combatRestore = Checkbox(c2, L["Auto-show after combat"], PAD, y2, "combatRestore")
     widgets.combatRestore = checkboxes.combatRestore
     y2 = y2 - ROW
-    checkboxes.raidAutoShow = Checkbox(c2, "Auto-show on ready-check / encounter", PAD, y2, "raidAutoShow")
+    checkboxes.raidAutoShow = Checkbox(c2, L["Auto-show on ready-check / encounter"], PAD, y2, "raidAutoShow")
     Y = Y - 108 - GAP
 
     ---- Automation -------------------------------------------------------
-    local c3 = Card(content, "Automation", 0, Y, CW, 188)
+    local c3 = Card(content, L["Automation"], 0, Y, CW, 188)
     local y3 = -28
-    checkboxes.instanceHide = Checkbox(c3, "Auto-hide in instances", PAD, y3,
+    checkboxes.instanceHide = Checkbox(c3, L["Auto-hide in instances"], PAD, y3,
         "instanceHide", function() RefreshDeps() end)
     y3 = y3 - ROW
-    local instLabels = { party="Dungeons", raid="Raids", pvp="PvP", arena="Arenas", scenario="Scenarios" }
+    local instLabels = { party=L["Dungeons"], raid=L["Raids"], pvp=L["PvP"], arena=L["Arenas"], scenario=L["Scenarios"] }
     local instOrder  = { "party", "raid", "pvp", "arena", "scenario" }
     local ix = PAD + 26
     for _, key in ipairs(instOrder) do
@@ -574,31 +575,31 @@ function ns.InitConfig()
         if ix > CW - 60 then ix = PAD + 26; y3 = y3 - 22 end
     end
     y3 = y3 - 34
-    widgets.inactSlider = Slider(c3, "Inactivity timer", PAD + 8, y3, 210,
+    widgets.inactSlider = Slider(c3, L["Inactivity timer"], PAD + 8, y3, 210,
         0, 60, 5, "inactivityTimer",
-        function(v) return v == 0 and "off" or (v .. "s") end)
+        function(v) return v == 0 and L["off"] or (v .. "s") end)
     y3 = y3 - SROW
-    checkboxes.inactivityReshow = Checkbox(c3, "Show chat on new message", PAD + 8, y3, "inactivityReshow")
+    checkboxes.inactivityReshow = Checkbox(c3, L["Show chat on new message"], PAD + 8, y3, "inactivityReshow")
     widgets.inactivityReshow = checkboxes.inactivityReshow
     Y = Y - 188 - GAP
 
     ---- Appearance -------------------------------------------------------
-    local c4 = Card(content, "Appearance", 0, Y, CW, 210)
+    local c4 = Card(content, L["Appearance"], 0, Y, CW, 210)
     local y4 = -28
-    checkboxes.fade = Checkbox(c4, "Fade transition (smooth easing)", PAD, y4,
+    checkboxes.fade = Checkbox(c4, L["Fade transition (smooth easing)"], PAD, y4,
         "fade", function() RefreshDeps() end)
     y4 = y4 - 30
-    widgets.fadeSlider = Slider(c4, "Fade duration", PAD + 8, y4, 210,
+    widgets.fadeSlider = Slider(c4, L["Fade duration"], PAD + 8, y4, 210,
         0.1, 1.0, 0.1, "fadeDuration",
         function(v) return string.format("%.1fs", v) end)
     y4 = y4 - SROW
-    widgets.opacSlider = Slider(c4, "Hidden opacity", PAD + 8, y4, 210,
+    widgets.opacSlider = Slider(c4, L["Hidden opacity"], PAD + 8, y4, 210,
         0, 1.0, 0.05, "opacity",
         function(v) return math.floor(v * 100) .. "%" end)
     y4 = y4 - SROW
-    checkboxes.mouseoverReveal = Checkbox(c4, "Show on mouse-over", PAD, y4, "mouseoverReveal")
+    checkboxes.mouseoverReveal = Checkbox(c4, L["Show on mouse-over"], PAD, y4, "mouseoverReveal")
     y4 = y4 - ROW
-    checkboxes.colorblind = Checkbox(c4, "Colorblind mode (high contrast)", PAD, y4,
+    checkboxes.colorblind = Checkbox(c4, L["Colorblind mode (high contrast)"], PAD, y4,
         "colorblind", function()
             if ns.UpdateButton then ns.UpdateButton() end
             if ns.UpdateMinimap then ns.UpdateMinimap() end
@@ -606,33 +607,33 @@ function ns.InitConfig()
     Y = Y - 210 - GAP
 
     ---- Chat -------------------------------------------------------------
-    local c5 = Card(content, "Chat", 0, Y, CW, 186)
+    local c5 = Card(content, L["Chat"], 0, Y, CW, 186)
     local y5 = -28
-    checkboxes.whisperNotify = Checkbox(c5, "Blink button on whisper", PAD, y5, "whisperNotify")
+    checkboxes.whisperNotify = Checkbox(c5, L["Blink button on whisper"], PAD, y5, "whisperNotify")
     y5 = y5 - ROW
-    checkboxes.whisperPass = Checkbox(c5, "Show whispers while hidden", PAD, y5, "whisperPass")
+    checkboxes.whisperPass = Checkbox(c5, L["Show whispers while hidden"], PAD, y5, "whisperPass")
     y5 = y5 - ROW
-    checkboxes.whisperSound = Checkbox(c5, "Play sound on whisper", PAD, y5, "whisperSound")
+    checkboxes.whisperSound = Checkbox(c5, L["Play sound on whisper"], PAD, y5, "whisperSound")
     y5 = y5 - ROW
-    checkboxes.keepCombatLog = Checkbox(c5, "Keep combat log visible", PAD, y5, "keepCombatLog")
+    checkboxes.keepCombatLog = Checkbox(c5, L["Keep combat log visible"], PAD, y5, "keepCombatLog")
     y5 = y5 - ROW
-    checkboxes.screenshotHide = Checkbox(c5, "Hide chat for screenshots", PAD, y5, "screenshotHide")
+    checkboxes.screenshotHide = Checkbox(c5, L["Hide chat for screenshots"], PAD, y5, "screenshotHide")
     y5 = y5 - ROW
-    checkboxes.scrollToRecent = Checkbox(c5, "Scroll to recent on unhide", PAD, y5, "scrollToRecent")
+    checkboxes.scrollToRecent = Checkbox(c5, L["Scroll to recent on unhide"], PAD, y5, "scrollToRecent")
     Y = Y - 186 - GAP
 
     ---- Zone Memory ------------------------------------------------------
-    local c_zone = Card(content, "Zone Memory", 0, Y, CW, 62)
-    checkboxes.zoneMemoryEnabled = Checkbox(c_zone, "Remember chat state per zone", PAD, -28, "zoneMemoryEnabled")
-    Btn(c_zone, "Clear Memory", CW - 108, -28, 94, function()
+    local c_zone = Card(content, L["Zone Memory"], 0, Y, CW, 62)
+    checkboxes.zoneMemoryEnabled = Checkbox(c_zone, L["Remember chat state per zone"], PAD, -28, "zoneMemoryEnabled")
+    Btn(c_zone, L["Clear Memory"], CW - 108, -28, 94, function()
         HideChatDB.zoneMemory = {}
-        print("|cFF2DD4BFHideChat:|r Zone memory cleared.")
+        print("|cFF2DD4BFHideChat:|r " .. L["Zone memory cleared."])
     end)
     Y = Y - 62 - GAP
 
     ---- Compatibility ----------------------------------------------------
-    local c6 = Card(content, "Compatibility", 0, Y, CW, 82)
-    checkboxes.alphaMode = Checkbox(c6, "Alpha mode (Chattynator / Prat / ElvUI)",
+    local c6 = Card(content, L["Compatibility"], 0, Y, CW, 82)
+    checkboxes.alphaMode = Checkbox(c6, L["Alpha mode (Chattynator / Prat / ElvUI)"],
         PAD, -28, "alphaMode", function()
             if ns.isHidden then ns.ShowChat(true); ns.HideChat(true) end
             if widgets.addonNote then
@@ -647,9 +648,9 @@ function ns.InitConfig()
                 if #addons > 0 then
                     local list = table.concat(addons, ", ")
                     if not HideChatDB.alphaMode then
-                        widgets.addonNote:SetText("|cFFE0A030Detected: " .. list .. " -- enable Alpha mode|r")
+                        widgets.addonNote:SetText("|cFFE0A030" .. L["Detected:"] .. " " .. list .. " -- " .. L["enable Alpha mode"] .. "|r")
                     else
-                        widgets.addonNote:SetText("|cFF666666Detected: " .. list .. "|r")
+                        widgets.addonNote:SetText("|cFF666666" .. L["Detected:"] .. " " .. list .. "|r")
                     end
                 end
             end
@@ -669,22 +670,22 @@ function ns.InitConfig()
         if #detected > 0 then
             local list = table.concat(detected, ", ")
             if not HideChatDB.alphaMode then
-                note:SetText("|cFFE0A030Detected: " .. list .. " -- enable Alpha mode|r")
+                note:SetText("|cFFE0A030" .. L["Detected:"] .. " " .. list .. " -- " .. L["enable Alpha mode"] .. "|r")
             else
-                note:SetText("|cFF666666Detected: " .. list .. "|r")
+                note:SetText("|cFF666666" .. L["Detected:"] .. " " .. list .. "|r")
             end
         else
-            note:SetText("|cFF444444No third-party chat addons detected|r")
+            note:SetText("|cFF444444" .. L["No third-party chat addons detected"] .. "|r")
         end
         widgets.addonNote = note
     end
     Y = Y - 82 - GAP
 
     ---- Profiles ---------------------------------------------------------
-    local c7 = Card(content, "Profiles", 0, Y, CW, 126)
+    local c7 = Card(content, L["Profiles"], 0, Y, CW, 126)
     local y7 = -28
     local profLabel = c7:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    profLabel:SetPoint("TOPLEFT", PAD, y7); profLabel:SetText("Active: Default")
+    profLabel:SetPoint("TOPLEFT", PAD, y7); profLabel:SetText(L["Active:"] .. " Default")
     widgets.profLabel = profLabel
 
     Btn(c7, "<", 210, y7, 26, function()
@@ -716,37 +717,37 @@ function ns.InitConfig()
 
     y7 = y7 - 30
     local bx = PAD
-    Btn(c7, "New", bx, y7, 56, function()
+    Btn(c7, L["New"], bx, y7, 56, function()
         StaticPopup_Show("HIDECHAT_NEW_PROFILE")
     end, "accent")
     bx = bx + 60
-    Btn(c7, "Copy", bx, y7, 56, function()
+    Btn(c7, L["Copy"], bx, y7, 56, function()
         StaticPopup_Show("HIDECHAT_COPY_PROFILE")
     end, "accent")
     bx = bx + 60
-    Btn(c7, "Rename", bx, y7, 64, function()
+    Btn(c7, L["Rename"], bx, y7, 64, function()
         local name = HideChatCharDB.activeProfile
         if name == "Default" then
-            print("|cFF2DD4BFHideChat:|r Cannot rename the Default profile."); return
+            print("|cFF2DD4BFHideChat:|r " .. L["Cannot rename the Default profile."]); return
         end
         StaticPopup_Show("HIDECHAT_RENAME_PROFILE", name)
     end)
     bx = bx + 68
-    Btn(c7, "Delete", bx, y7, 64, function()
+    Btn(c7, L["Delete"], bx, y7, 64, function()
         local name = HideChatCharDB.activeProfile
         if name == "Default" then
-            print("|cFF2DD4BFHideChat:|r Cannot delete Default profile."); return
+            print("|cFF2DD4BFHideChat:|r " .. L["Cannot delete Default profile."]); return
         end
         StaticPopup_Show("HIDECHAT_DELETE_PROFILE", name)
     end, "danger")
 
     y7 = y7 - 28
     bx = PAD
-    Btn(c7, "Export", bx, y7, 64, function()
+    Btn(c7, L["Export"], bx, y7, 64, function()
         StaticPopup_Show("HIDECHAT_EXPORT_PROFILE")
     end, "accent")
     bx = bx + 68
-    Btn(c7, "Import", bx, y7, 64, function()
+    Btn(c7, L["Import"], bx, y7, 64, function()
         StaticPopup_Show("HIDECHAT_IMPORT_PROFILE")
     end, "accent")
 
@@ -759,15 +760,15 @@ function ns.InitConfig()
         if bound then
             specNote:SetText("|cFF888888Spec " .. specIdx .. " -> " .. bound .. "|r")
         else
-            specNote:SetText("|cFF555555No spec binding|r")
+            specNote:SetText("|cFF555555" .. L["No spec binding"] .. "|r")
         end
     else
-        specNote:SetText("|cFF555555Spec profiles: retail only|r")
+        specNote:SetText("|cFF555555" .. L["Spec profiles: retail only"] .. "|r")
     end
     widgets.specNote = specNote
 
     if GetSpecialization then
-        Btn(c7, "Bind to Spec", bx + 68, y7, 90, function()
+        Btn(c7, L["Bind to Spec"], bx + 68, y7, 90, function()
             local specIdx = GetSpecialization()
             if not specIdx then return end
             if not HideChatDB.specProfiles then HideChatDB.specProfiles = {} end
@@ -783,7 +784,7 @@ function ns.InitConfig()
 
     ---- Reset + Commands -------------------------------------------------
     Y = Y - 4
-    Btn(content, "Reset All Settings", 0, Y, 140, function()
+    Btn(content, L["Reset All Settings"], 0, Y, 140, function()
         StaticPopup_Show("HIDECHAT_RESET_ALL")
     end, "danger")
     Y = Y - 36
@@ -792,15 +793,15 @@ function ns.InitConfig()
     hint:SetPoint("TOPLEFT", 4, Y); hint:SetWidth(CW - 10); hint:SetJustifyH("LEFT")
     hint:SetSpacing(2)
     hint:SetText(
-        "|cFF666666/hidechat|r  or  |cFF666666/hc|r  --  toggle\n" ..
-        "|cFF666666/hc show  /  /hc hide|r  --  force state\n" ..
-        "|cFF666666/hc config|r  --  this panel\n" ..
-        "|cFF666666/hc status|r  --  diagnostics\n" ..
-        "|cFF666666/hc debug|r  --  detailed debug output\n" ..
-        "|cFF666666/hc export  /  /hc import|r  --  profiles\n" ..
-        "|cFF666666/hc reset|r  --  restore defaults\n" ..
-        "|cFF555555Key Bindings: ESC > Key Bindings > HideChat|r\n" ..
-        "|cFF555555Hold to Peek: bindable key, shows chat while held|r"
+        "|cFF666666/hidechat|r  or  |cFF666666/hc|r  --  " .. L["toggle"] .. "\n" ..
+        "|cFF666666/hc show  /  /hc hide|r  --  " .. L["force state"] .. "\n" ..
+        "|cFF666666/hc config|r  --  " .. L["this panel"] .. "\n" ..
+        "|cFF666666/hc status|r  --  " .. L["diagnostics"] .. "\n" ..
+        "|cFF666666/hc debug|r  --  " .. L["detailed debug output"] .. "\n" ..
+        "|cFF666666/hc export  /  /hc import|r  --  " .. L["profiles"] .. "\n" ..
+        "|cFF666666/hc reset|r  --  " .. L["restore defaults"] .. "\n" ..
+        "|cFF555555" .. L["Key Bindings: ESC > Key Bindings > HideChat"] .. "|r\n" ..
+        "|cFF555555" .. L["Hold to Peek: bindable key, shows chat while held"] .. "|r"
     )
     Y = Y - 120
 
@@ -842,7 +843,7 @@ local function Refresh()
         local idx = 1
         for i, n in ipairs(names) do if n == cur then idx = i; break end end
         local count = #names > 0 and (" |cFF555555(" .. idx .. "/" .. #names .. ")|r") or ""
-        widgets.profLabel:SetText("Active: |cFFFFFFFF" .. cur .. "|r" .. count)
+        widgets.profLabel:SetText(L["Active:"] .. " |cFFFFFFFF" .. cur .. "|r" .. count)
     end
     if widgets.specNote and GetSpecialization then
         local specIdx = GetSpecialization()
@@ -850,7 +851,7 @@ local function Refresh()
         if bound then
             widgets.specNote:SetText("|cFF888888Spec " .. specIdx .. " -> " .. bound .. "|r")
         else
-            widgets.specNote:SetText("|cFF555555No spec binding|r")
+            widgets.specNote:SetText("|cFF555555" .. L["No spec binding"] .. "|r")
         end
     end
     RefreshDeps()

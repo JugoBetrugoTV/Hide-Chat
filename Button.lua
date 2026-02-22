@@ -1,4 +1,5 @@
 local addonName, ns = ...
+local L = ns.L
 
 local btn         -- toggle button
 local minimapBtn  -- minimap button
@@ -213,22 +214,22 @@ function ns.InitButton()
         GameTooltip:AddLine(" ")
         if ns.isHidden then
             local _, coral = GetColors()
-            GameTooltip:AddLine("Status: Hidden", coral[1], coral[2], coral[3])
+            GameTooltip:AddLine(L["Status: Hidden"], coral[1], coral[2], coral[3])
         else
-            GameTooltip:AddLine("Status: Visible", teal[1], teal[2], teal[3])
+            GameTooltip:AddLine(L["Status: Visible"], teal[1], teal[2], teal[3])
         end
         if ns._hasWhisper then
             local _, _, amber = GetColors()
-            GameTooltip:AddLine("New whisper!", amber[1], amber[2], amber[3])
+            GameTooltip:AddLine(L["New whisper!"], amber[1], amber[2], amber[3])
         end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Left-click: Toggle chat", 0.8, 0.8, 0.8)
-        GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(L["Left-click: Toggle chat"], 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(L["Right-click: Settings"], 0.8, 0.8, 0.8)
         if ns._hasWhisper then
-            GameTooltip:AddLine("Middle-click: Quick reply", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(L["Middle-click: Quick reply"], 0.8, 0.8, 0.8)
         end
         if not HideChatDB.lockButton then
-            GameTooltip:AddLine("Drag: Move button", 0.5, 0.5, 0.5)
+            GameTooltip:AddLine(L["Drag: Move button"], 0.5, 0.5, 0.5)
         end
         GameTooltip:Show()
     end)
@@ -358,21 +359,21 @@ function ns.InitMinimapButton()
         GameTooltip:AddLine(" ")
         if ns.isHidden then
             local _, coral = GetColors()
-            GameTooltip:AddLine("Status: Hidden", coral[1], coral[2], coral[3])
+            GameTooltip:AddLine(L["Status: Hidden"], coral[1], coral[2], coral[3])
         else
-            GameTooltip:AddLine("Status: Visible", teal2[1], teal2[2], teal2[3])
+            GameTooltip:AddLine(L["Status: Visible"], teal2[1], teal2[2], teal2[3])
         end
         if ns._hasWhisper then
             local _, _, amber = GetColors()
-            GameTooltip:AddLine("New whisper!", amber[1], amber[2], amber[3])
+            GameTooltip:AddLine(L["New whisper!"], amber[1], amber[2], amber[3])
         end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Left-click: Toggle", 0.8, 0.8, 0.8)
-        GameTooltip:AddLine("Right-click: Settings", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(L["Left-click: Toggle"], 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(L["Right-click: Settings"], 0.8, 0.8, 0.8)
         if ns._hasWhisper then
-            GameTooltip:AddLine("Middle-click: Quick reply", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(L["Middle-click: Quick reply"], 0.8, 0.8, 0.8)
         end
-        GameTooltip:AddLine("Drag: Reposition", 0.5, 0.5, 0.5)
+        GameTooltip:AddLine(L["Drag: Reposition"], 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
     minimapBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)

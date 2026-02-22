@@ -1,11 +1,12 @@
 local addonName, ns = ...
+local L = ns.L
 
 ---------------------------------------------------------------------------
 -- Keybinding header / label (shown in Key Bindings UI)
 ---------------------------------------------------------------------------
 BINDING_HEADER_HIDECHAT = "HideChat"
-BINDING_NAME_HIDECHAT_TOGGLE = "Toggle Chat Visibility"
-BINDING_NAME_HIDECHAT_PEEK   = "Hold to Peek"
+BINDING_NAME_HIDECHAT_TOGGLE = L["Toggle Chat Visibility"]
+BINDING_NAME_HIDECHAT_PEEK   = L["Hold to Peek"]
 
 ---------------------------------------------------------------------------
 -- Default saved-variable values
@@ -474,7 +475,7 @@ function ns.HideChat(silent)
         ns.isHidden = true
         HideChatDB.hidden = true
         if not silent then
-            ShowNotification("|cFF2DD4BFHideChat|r  |cFFE06666Chat hidden|r")
+            ShowNotification("|cFF2DD4BFHideChat|r  |cFFE06666" .. L["Chat hidden"] .. "|r")
         end
         if ns.UpdateButton  then ns.UpdateButton()  end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
@@ -509,7 +510,7 @@ function ns.ShowChat(silent)
     ScrollChatToRecent()
 
     if not silent then
-        ShowNotification("|cFF2DD4BFHideChat|r  |cFF2DD4BFChat visible|r")
+        ShowNotification("|cFF2DD4BFHideChat|r  |cFF2DD4BF" .. L["Chat visible"] .. "|r")
     end
     if ns.UpdateButton  then ns.UpdateButton()  end
     if ns.UpdateMinimap then ns.UpdateMinimap() end
@@ -579,13 +580,13 @@ function HideChat_OnAddonCompartmentEnter(addonName, menuButton)
     GameTooltip:AddLine("HideChat", 0, 1, 0)
     GameTooltip:AddLine(" ")
     if ns.isHidden then
-        GameTooltip:AddLine("Status: Hidden", 0.9, 0.2, 0.2)
+        GameTooltip:AddLine(L["Status: Hidden"], 0.9, 0.2, 0.2)
     else
-        GameTooltip:AddLine("Status: Visible", 0.2, 0.9, 0.2)
+        GameTooltip:AddLine(L["Status: Visible"], 0.2, 0.9, 0.2)
     end
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Left-click: Toggle chat", 1, 1, 1)
-    GameTooltip:AddLine("Right-click: Settings", 1, 1, 1)
+    GameTooltip:AddLine(L["Left-click: Toggle chat"], 1, 1, 1)
+    GameTooltip:AddLine(L["Right-click: Settings"], 1, 1, 1)
     GameTooltip:Show()
 end
 
@@ -641,7 +642,7 @@ function ns.CreateProfile(name)
     if not name or name == "" then return false end
     if not HideChatDB.profiles then HideChatDB.profiles = {} end
     if HideChatDB.profiles[name] then
-        print("|cFF2DD4BFHideChat:|r Profile \"" .. name .. "\" already exists.")
+        print("|cFF2DD4BFHideChat:|r " .. string.format(L["Profile \"%s\" already exists."], name))
         return false
     end
     local p = {}
@@ -654,13 +655,13 @@ end
 
 function ns.RenameProfile(oldName, newName)
     if oldName == "Default" then
-        print("|cFF2DD4BFHideChat:|r Cannot rename the Default profile.")
+        print("|cFF2DD4BFHideChat:|r " .. L["Cannot rename the Default profile."])
         return false
     end
     if not newName or newName == "" then return false end
     if not HideChatDB.profiles or not HideChatDB.profiles[oldName] then return false end
     if HideChatDB.profiles[newName] then
-        print("|cFF2DD4BFHideChat:|r Profile \"" .. newName .. "\" already exists.")
+        print("|cFF2DD4BFHideChat:|r " .. string.format(L["Profile \"%s\" already exists."], newName))
         return false
     end
     HideChatDB.profiles[newName] = HideChatDB.profiles[oldName]
@@ -824,18 +825,18 @@ do
 
     function ns.ImportProfile(str, targetName)
         if not str or not str:match("^HC1:") then
-            print("|cFF2DD4BFHideChat:|r Invalid import string.")
+            print("|cFF2DD4BFHideChat:|r " .. L["Invalid import string."])
             return false
         end
         local encoded = str:sub(5)
         local ok, data = pcall(FromBase64, encoded)
         if not ok or not data or data == "" then
-            print("|cFF2DD4BFHideChat:|r Failed to decode import string.")
+            print("|cFF2DD4BFHideChat:|r " .. L["Failed to decode import string."])
             return false
         end
         local ok2, tbl = pcall(Deserialize, data)
         if not ok2 or type(tbl) ~= "table" then
-            print("|cFF2DD4BFHideChat:|r Failed to parse import data.")
+            print("|cFF2DD4BFHideChat:|r " .. L["Failed to parse import data."])
             return false
         end
         -- Validate: must have at least one known key
@@ -844,13 +845,13 @@ do
             if settingKeys[k] then valid = true; break end
         end
         if not valid then
-            print("|cFF2DD4BFHideChat:|r Import data contains no valid settings.")
+            print("|cFF2DD4BFHideChat:|r " .. L["Import data contains no valid settings."])
             return false
         end
         targetName = targetName or ("Imported " .. date("%H:%M"))
         if not HideChatDB.profiles then HideChatDB.profiles = {} end
         HideChatDB.profiles[targetName] = tbl
-        print("|cFF2DD4BFHideChat:|r Profile \"" .. targetName .. "\" imported successfully.")
+        print("|cFF2DD4BFHideChat:|r " .. string.format(L["Profile \"%s\" imported successfully."], targetName))
         return true
     end
 end
@@ -1092,19 +1093,19 @@ SlashCmdList["HIDECHAT"] = function(msg)
     elseif msg == "status" then
         local mode = UseAlphaMethod() and "alpha" or "reparent"
         print("|cFF00FF00HideChat v" .. ns.version .. "|r")
-        print("  Profile: " .. (HideChatCharDB.activeProfile or "Default"))
-        print("  Chat: " .. (ns.isHidden and "|cFFFF4444hidden|r" or "|cFF44FF44visible|r"))
-        print("  Mode: " .. mode)
-        print("  Combat: " .. (HideChatDB.combat and "on" or "off"))
-        print("  Fade: " .. (HideChatDB.fade and string.format("%.1fs", HideChatDB.fadeDuration) or "off"))
-        print("  Opacity: " .. math.floor((HideChatDB.opacity or 0) * 100) .. "%")
-        if HideChatDB.instanceHide    then print("  Instance auto-hide: on") end
-        if HideChatDB.inactivityTimer > 0 then print("  Inactivity: " .. HideChatDB.inactivityTimer .. "s") end
-        if HideChatDB.mouseoverReveal then print("  Mouseover reveal: on") end
-        if HideChatDB.keepCombatLog   then print("  Combat log kept: on") end
-        if HideChatDB.raidAutoShow    then print("  Raid auto-show: on") end
-        if HideChatDB.whisperSound    then print("  Whisper sound: on") end
-        if HideChatDB.zoneMemoryEnabled then print("  Zone memory: on") end
+        print("  " .. L["Profile:"] .. " " .. (HideChatCharDB.activeProfile or "Default"))
+        print("  " .. L["Chat:"] .. " " .. (ns.isHidden and "|cFFFF4444" .. L["hidden"] .. "|r" or "|cFF44FF44" .. L["visible"] .. "|r"))
+        print("  " .. L["Mode:"] .. " " .. mode)
+        print("  " .. L["Combat:"] .. " " .. (HideChatDB.combat and L["on"] or L["off"]))
+        print("  " .. L["Fade:"] .. " " .. (HideChatDB.fade and string.format("%.1fs", HideChatDB.fadeDuration) or L["off"]))
+        print("  " .. L["Opacity:"] .. " " .. math.floor((HideChatDB.opacity or 0) * 100) .. "%")
+        if HideChatDB.instanceHide    then print("  " .. L["Instance auto-hide: on"]) end
+        if HideChatDB.inactivityTimer > 0 then print("  " .. L["Inactivity:"] .. " " .. HideChatDB.inactivityTimer .. "s") end
+        if HideChatDB.mouseoverReveal then print("  " .. L["Mouseover reveal: on"]) end
+        if HideChatDB.keepCombatLog   then print("  " .. L["Combat log kept: on"]) end
+        if HideChatDB.raidAutoShow    then print("  " .. L["Raid auto-show: on"]) end
+        if HideChatDB.whisperSound    then print("  " .. L["Whisper sound: on"]) end
+        if HideChatDB.zoneMemoryEnabled then print("  " .. L["Zone memory: on"]) end
         local addons = {}
         local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
         if isLoaded then
@@ -1113,16 +1114,16 @@ SlashCmdList["HIDECHAT"] = function(msg)
         if _G["ChattynatorFrame"] then addons[#addons + 1] = "Chattynator" end
         if _G["ElvUI"]            then addons[#addons + 1] = "ElvUI" end
         if _G["GlassFrame"]       then addons[#addons + 1] = "Glass" end
-        if #addons > 0 then print("  Chat addons: " .. table.concat(addons, ", ")) end
+        if #addons > 0 then print("  " .. L["Chat addons:"] .. " " .. table.concat(addons, ", ")) end
 
     elseif msg:match("^export") then
         local name = msg:match("^export%s+(.+)") or HideChatCharDB.activeProfile
         local str = ns.ExportProfile(name)
         if str then
-            print("|cFF2DD4BFHideChat:|r Export string for \"" .. name .. "\":")
+            print("|cFF2DD4BFHideChat:|r " .. string.format(L["Export string for \"%s\":"], name))
             print(str)
         else
-            print("|cFF2DD4BFHideChat:|r Profile not found.")
+            print("|cFF2DD4BFHideChat:|r " .. L["Profile not found."])
         end
 
     elseif msg:match("^import") then
@@ -1130,7 +1131,7 @@ SlashCmdList["HIDECHAT"] = function(msg)
         if rest then
             ns.ImportProfile(rest)
         else
-            print("|cFF2DD4BFHideChat:|r Usage: /hc import HC1:...")
+            print("|cFF2DD4BFHideChat:|r " .. L["Usage: /hc import HC1:..."])
         end
 
     elseif msg == "reset" then
@@ -1144,7 +1145,7 @@ SlashCmdList["HIDECHAT"] = function(msg)
         if ns.UpdateButton  then ns.UpdateButton()  end
         if ns.UpdateMinimap then ns.UpdateMinimap() end
         if ns.RefreshConfig then ns.RefreshConfig() end
-        print("|cFF00FF00HideChat:|r Settings reset to defaults.")
+        print("|cFF00FF00HideChat:|r " .. L["Settings reset to defaults."])
 
     else
         HideChat_Toggle()
