@@ -1,6 +1,12 @@
 ## Interface: 11508
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Classic Era)
+## Notes-deDE: Chatfenster mit Befehl, Tastenkürzel oder Knopf ein- und ausblenden. (Classic Era)
+## Notes-esES: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Era Clásica)
+## Notes-esMX: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Era Clásica)
+## Notes-frFR: Masquer et afficher la fenêtre de chat avec une commande, un raccourci ou un bouton. (Ère Classique)
+## Notes-itIT: Nascondi e mostra la finestra di chat con un comando, un tasto o un pulsante. (Era Classica)
+## Notes-ruRU: Скрытие и отображение окна чата с помощью команды, клавиши или кнопки. (Классическая Эра)
 ## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（经典怀旧服）
 ## Author: JugoBetrugoTV
 ## Version: 1.4.1

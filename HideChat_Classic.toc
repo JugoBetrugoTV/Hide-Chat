@@ -1,6 +1,12 @@
 ## Interface: 50503
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Mists of Pandaria Classic)
+## Notes-deDE: Chatfenster mit Befehl, Tastenkürzel oder Knopf ein- und ausblenden. (Mists of Pandaria Classic)
+## Notes-esES: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Mists of Pandaria Clásico)
+## Notes-esMX: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Mists of Pandaria Clásico)
+## Notes-frFR: Masquer et afficher la fenêtre de chat avec une commande, un raccourci ou un bouton. (Mists of Pandaria Classique)
+## Notes-itIT: Nascondi e mostra la finestra di chat con un comando, un tasto o un pulsante. (Mists of Pandaria Classico)
+## Notes-ruRU: Скрытие и отображение окна чата с помощью команды, клавиши или кнопки. (Mists of Pandaria Классика)
 ## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（熊猫人之谜 经典版）
 ## Author: JugoBetrugoTV
 ## Version: 1.4.1

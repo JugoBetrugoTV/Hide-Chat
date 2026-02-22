@@ -1,6 +1,12 @@
 ## Interface: 30800
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Wrath Titan Reforged)
+## Notes-deDE: Chatfenster mit Befehl, Tastenkürzel oder Knopf ein- und ausblenden. (Wrath Titan Reforged)
+## Notes-esES: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Wrath Titan Reforged)
+## Notes-esMX: Oculta y muestra la ventana de chat con un comando, atajo o botón. (Wrath Titan Reforged)
+## Notes-frFR: Masquer et afficher la fenêtre de chat avec une commande, un raccourci ou un bouton. (Wrath Titan Reforged)
+## Notes-itIT: Nascondi e mostra la finestra di chat con un comando, un tasto o un pulsante. (Wrath Titan Reforged)
+## Notes-ruRU: Скрытие и отображение окна чата с помощью команды, клавиши или кнопки. (Wrath Titan Reforged)
 ## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（巫妖王之怒 泰坦再铸）
 ## Author: JugoBetrugoTV
 ## Version: 1.4.1
