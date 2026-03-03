@@ -39,7 +39,7 @@ local defaults = {
     whisperSound     = true,            -- play sound on whisper while hidden
     keepCombatLog    = false,
     hideEditBox      = false,            -- also hide the typing area at bottom
-    showOnEnter      = false,            -- show chat when pressing Enter to type
+    showOnEnter      = true,             -- show chat when pressing Enter to type
     scrollToRecent   = true,            -- scroll to bottom on unhide
     -- Minimap
     showMinimap      = true,
