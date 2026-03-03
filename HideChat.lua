@@ -388,6 +388,12 @@ local function InitEditBoxBlock()
         -- Show chat when pressing Enter to type
         if HideChatDB.showOnEnter then
             ns.ShowChat(true)
+            -- Re-open chat input; ns.isHidden is now false so the hook won't recurse
+            C_Timer.After(0, function()
+                if ChatFrame_OpenChat then
+                    ChatFrame_OpenChat("")
+                end
+            end)
             return
         end
         for i = 1, NUM_CHAT_WINDOWS do
