@@ -279,9 +279,10 @@ end
 ---------------------------------------------------------------------------
 local function RefreshDeps()
     if not widgets then return end
-    if widgets.combatRestore   then widgets.combatRestore:SetOptionEnabled(HideChatDB.combat) end
-    if widgets.fadeSlider       then widgets.fadeSlider:SetOptionEnabled(HideChatDB.fade) end
-    if widgets.inactivityReshow then widgets.inactivityReshow:SetOptionEnabled(HideChatDB.inactivityTimer > 0) end
+    if widgets.combatRestore       then widgets.combatRestore:SetOptionEnabled(HideChatDB.combat) end
+    if widgets.fadeSlider           then widgets.fadeSlider:SetOptionEnabled(HideChatDB.fade) end
+    if widgets.mouseoverFadeSlider  then widgets.mouseoverFadeSlider:SetOptionEnabled(HideChatDB.mouseoverReveal) end
+    if widgets.inactivityReshow     then widgets.inactivityReshow:SetOptionEnabled(HideChatDB.inactivityTimer > 0) end
     for _, cb in ipairs(widgets.instChecks or {}) do
         cb:SetOptionEnabled(HideChatDB.instanceHide)
     end
@@ -584,7 +585,7 @@ function ns.InitConfig()
     Y = Y - 188 - GAP
 
     ---- Appearance -------------------------------------------------------
-    local c4 = Card(content, L["Appearance"], 0, Y, CW, 210)
+    local c4 = Card(content, L["Appearance"], 0, Y, CW, 250)
     local y4 = -28
     checkboxes.fade = Checkbox(c4, L["Fade transition (smooth easing)"], PAD, y4,
         "fade", function() RefreshDeps() end)
@@ -597,17 +598,22 @@ function ns.InitConfig()
         0, 1.0, 0.05, "opacity",
         function(v) return math.floor(v * 100) .. "%" end)
     y4 = y4 - SROW
-    checkboxes.mouseoverReveal = Checkbox(c4, L["Show on mouse-over"], PAD, y4, "mouseoverReveal")
-    y4 = y4 - ROW
+    checkboxes.mouseoverReveal = Checkbox(c4, L["Show on mouse-over"], PAD, y4,
+        "mouseoverReveal", function() RefreshDeps() end)
+    y4 = y4 - 30
+    widgets.mouseoverFadeSlider = Slider(c4, L["Mouseover fade-out delay"], PAD + 8, y4, 210,
+        0, 15, 1, "mouseoverFadeOut",
+        function(v) return v == 0 and L["off"] or (v .. "s") end)
+    y4 = y4 - SROW
     checkboxes.colorblind = Checkbox(c4, L["Colorblind mode (high contrast)"], PAD, y4,
         "colorblind", function()
             if ns.UpdateButton then ns.UpdateButton() end
             if ns.UpdateMinimap then ns.UpdateMinimap() end
         end)
-    Y = Y - 210 - GAP
+    Y = Y - 250 - GAP
 
     ---- Chat -------------------------------------------------------------
-    local c5 = Card(content, L["Chat"], 0, Y, CW, 186)
+    local c5 = Card(content, L["Chat"], 0, Y, CW, 238)
     local y5 = -28
     checkboxes.whisperNotify = Checkbox(c5, L["Blink button on whisper"], PAD, y5, "whisperNotify")
     y5 = y5 - ROW
@@ -620,7 +626,11 @@ function ns.InitConfig()
     checkboxes.screenshotHide = Checkbox(c5, L["Hide chat for screenshots"], PAD, y5, "screenshotHide")
     y5 = y5 - ROW
     checkboxes.scrollToRecent = Checkbox(c5, L["Scroll to recent on unhide"], PAD, y5, "scrollToRecent")
-    Y = Y - 186 - GAP
+    y5 = y5 - ROW
+    checkboxes.hideEditBox = Checkbox(c5, L["Hide typing area"], PAD, y5, "hideEditBox")
+    y5 = y5 - ROW
+    checkboxes.showOnEnter = Checkbox(c5, L["Show chat on Enter key"], PAD, y5, "showOnEnter")
+    Y = Y - 238 - GAP
 
     ---- Zone Memory ------------------------------------------------------
     local c_zone = Card(content, L["Zone Memory"], 0, Y, CW, 62)
@@ -834,9 +844,10 @@ local function Refresh()
             if cb:GetChecked() then cb._fill:Show() else cb._fill:Hide() end
         end
     end
-    if widgets.fadeSlider  then widgets.fadeSlider.slider:SetValue(HideChatDB.fadeDuration) end
-    if widgets.opacSlider  then widgets.opacSlider.slider:SetValue(HideChatDB.opacity or 0) end
-    if widgets.inactSlider then widgets.inactSlider.slider:SetValue(HideChatDB.inactivityTimer) end
+    if widgets.fadeSlider          then widgets.fadeSlider.slider:SetValue(HideChatDB.fadeDuration) end
+    if widgets.opacSlider          then widgets.opacSlider.slider:SetValue(HideChatDB.opacity or 0) end
+    if widgets.mouseoverFadeSlider then widgets.mouseoverFadeSlider.slider:SetValue(HideChatDB.mouseoverFadeOut or 0) end
+    if widgets.inactSlider         then widgets.inactSlider.slider:SetValue(HideChatDB.inactivityTimer) end
     if widgets.profLabel then
         local names = ns.GetProfileNames and ns.GetProfileNames() or {}
         local cur = HideChatCharDB.activeProfile or "Default"

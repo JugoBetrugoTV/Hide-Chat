@@ -143,17 +143,21 @@ function ns.InitMouseover()
 
     local active = false
     local cooldown = 0
+    local fadeOutTimer = nil
 
     detector:SetScript("OnUpdate", function(self, elapsed)
         cooldown = cooldown - elapsed
         if not ns.isHidden then
             if active then active = false end
+            if fadeOutTimer then fadeOutTimer:Cancel(); fadeOutTimer = nil end
             return
         end
         if not HideChatDB.mouseoverReveal then return end
         if cooldown > 0 then return end
 
         if self:IsMouseOver() then
+            -- Cancel any pending fade-out timer
+            if fadeOutTimer then fadeOutTimer:Cancel(); fadeOutTimer = nil end
             if not active then
                 active = true
                 ns.MouseoverShow()
@@ -161,8 +165,20 @@ function ns.InitMouseover()
         else
             if active then
                 active = false
-                cooldown = 0.2   -- small cooldown to prevent flicker
-                ns.MouseoverHide()
+                local delay = HideChatDB.mouseoverFadeOut or 0
+                if delay > 0 then
+                    -- Keep chat visible; hide after delay
+                    if not fadeOutTimer then
+                        fadeOutTimer = C_Timer.NewTimer(delay, function()
+                            fadeOutTimer = nil
+                            cooldown = 0.2
+                            ns.MouseoverHide()
+                        end)
+                    end
+                else
+                    cooldown = 0.2   -- small cooldown to prevent flicker
+                    ns.MouseoverHide()
+                end
             end
         end
     end)

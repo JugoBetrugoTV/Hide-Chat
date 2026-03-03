@@ -58,6 +58,7 @@ if GetLocale() == "zhCN" then
     L["Fade duration"]              = "淡入淡出时长"
     L["Hidden opacity"]             = "隐藏时透明度"
     L["Show on mouse-over"]         = "鼠标悬停时显示"
+    L["Mouseover fade-out delay"]   = "鼠标移开后淡出延迟"
     L["Colorblind mode (high contrast)"]    = "色盲模式（高对比度）"
 
     -- Chat
@@ -67,6 +68,8 @@ if GetLocale() == "zhCN" then
     L["Keep combat log visible"]    = "保持战斗记录可见"
     L["Hide chat for screenshots"]  = "截图时隐藏聊天"
     L["Scroll to recent on unhide"] = "显示时滚动到最新消息"
+    L["Hide typing area"]           = "隐藏输入区域"
+    L["Show chat on Enter key"]     = "按回车键时显示聊天"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "按区域记住聊天状态"
@@ -218,6 +221,7 @@ if GetLocale() == "deDE" then
     L["Fade duration"]              = "Überblendungsdauer"
     L["Hidden opacity"]             = "Deckkraft im verborgenen Zustand"
     L["Show on mouse-over"]         = "Bei Mausberührung anzeigen"
+    L["Mouseover fade-out delay"]   = "Maus-Ausblendverzögerung"
     L["Colorblind mode (high contrast)"]    = "Farbenblind-Modus (hoher Kontrast)"
 
     -- Chat
@@ -227,6 +231,8 @@ if GetLocale() == "deDE" then
     L["Keep combat log visible"]    = "Kampflog sichtbar halten"
     L["Hide chat for screenshots"]  = "Chat für Screenshots ausblenden"
     L["Scroll to recent on unhide"] = "Beim Einblenden zu neuesten Nachrichten scrollen"
+    L["Hide typing area"]           = "Eingabebereich ausblenden"
+    L["Show chat on Enter key"]     = "Chat bei Eingabetaste anzeigen"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "Chat-Status pro Gebiet merken"
@@ -378,6 +384,7 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
     L["Fade duration"]              = "Duración de la transición"
     L["Hidden opacity"]             = "Opacidad al ocultar"
     L["Show on mouse-over"]         = "Mostrar al pasar el ratón"
+    L["Mouseover fade-out delay"]   = "Retardo de desvanecimiento del ratón"
     L["Colorblind mode (high contrast)"]    = "Modo daltónico (alto contraste)"
 
     -- Chat
@@ -387,6 +394,8 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
     L["Keep combat log visible"]    = "Mantener registro de combate visible"
     L["Hide chat for screenshots"]  = "Ocultar chat para capturas"
     L["Scroll to recent on unhide"] = "Desplazar a recientes al mostrar"
+    L["Hide typing area"]           = "Ocultar área de escritura"
+    L["Show chat on Enter key"]     = "Mostrar chat al pulsar Intro"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "Recordar estado del chat por zona"
@@ -538,6 +547,7 @@ if GetLocale() == "frFR" then
     L["Fade duration"]              = "Durée du fondu"
     L["Hidden opacity"]             = "Opacité masquée"
     L["Show on mouse-over"]         = "Afficher au survol de la souris"
+    L["Mouseover fade-out delay"]   = "Délai de disparition au survol"
     L["Colorblind mode (high contrast)"]    = "Mode daltonien (contraste élevé)"
 
     -- Chat
@@ -547,6 +557,8 @@ if GetLocale() == "frFR" then
     L["Keep combat log visible"]    = "Garder le journal de combat visible"
     L["Hide chat for screenshots"]  = "Masquer le chat pour les captures d'écran"
     L["Scroll to recent on unhide"] = "Défiler vers les récents à l'affichage"
+    L["Hide typing area"]           = "Masquer la zone de saisie"
+    L["Show chat on Enter key"]     = "Afficher le chat avec la touche Entrée"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "Mémoriser l'état du chat par zone"
@@ -698,6 +710,7 @@ if GetLocale() == "itIT" then
     L["Fade duration"]              = "Durata dissolvenza"
     L["Hidden opacity"]             = "Opacità da nascosto"
     L["Show on mouse-over"]         = "Mostra al passaggio del mouse"
+    L["Mouseover fade-out delay"]   = "Ritardo dissolvenza al passaggio"
     L["Colorblind mode (high contrast)"]    = "Modalità daltonici (alto contrasto)"
 
     -- Chat
@@ -707,6 +720,8 @@ if GetLocale() == "itIT" then
     L["Keep combat log visible"]    = "Mantieni registro combattimento visibile"
     L["Hide chat for screenshots"]  = "Nascondi chat per screenshot"
     L["Scroll to recent on unhide"] = "Scorri ai recenti quando mostrato"
+    L["Hide typing area"]           = "Nascondi area di digitazione"
+    L["Show chat on Enter key"]     = "Mostra chat con tasto Invio"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "Ricorda stato chat per zona"
@@ -858,6 +873,7 @@ if GetLocale() == "ruRU" then
     L["Fade duration"]              = "Длительность затухания"
     L["Hidden opacity"]             = "Прозрачность в скрытом режиме"
     L["Show on mouse-over"]         = "Показывать при наведении мыши"
+    L["Mouseover fade-out delay"]   = "Задержка скрытия после наведения"
     L["Colorblind mode (high contrast)"]    = "Режим для дальтоников (высокий контраст)"
 
     -- Chat
@@ -867,6 +883,8 @@ if GetLocale() == "ruRU" then
     L["Keep combat log visible"]    = "Оставить журнал боя видимым"
     L["Hide chat for screenshots"]  = "Скрыть чат для скриншотов"
     L["Scroll to recent on unhide"] = "Прокрутить к последним при показе"
+    L["Hide typing area"]           = "Скрыть область ввода"
+    L["Show chat on Enter key"]     = "Показать чат по нажатию Enter"
 
     -- Zone Memory
     L["Remember chat state per zone"] = "Запоминать состояние чата по зоне"

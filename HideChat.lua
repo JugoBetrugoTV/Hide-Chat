@@ -24,6 +24,7 @@ local defaults = {
     -- Appearance
     opacity          = 0,               -- 0 = fully hidden, 0.01-1.0 = partial
     mouseoverReveal  = true,
+    mouseoverFadeOut = 3,               -- seconds before mouseover-revealed chat fades back (0 = instant)
     colorblind       = false,           -- shape-based + high-contrast colours
     -- Automation
     inactivityTimer  = 5,               -- seconds, 0 = disabled
@@ -37,6 +38,8 @@ local defaults = {
     whisperPass      = true,            -- forward whispers to UIErrorsFrame
     whisperSound     = true,            -- play sound on whisper while hidden
     keepCombatLog    = false,
+    hideEditBox      = false,            -- also hide the typing area at bottom
+    showOnEnter      = false,            -- show chat when pressing Enter to type
     scrollToRecent   = true,            -- scroll to bottom on unhide
     -- Minimap
     showMinimap      = true,
@@ -217,6 +220,14 @@ function ns.GetChatElements()
         if f then elements[#elements + 1] = f end
     end
 
+    -- Edit boxes (typing area at the bottom)
+    if HideChatDB.hideEditBox then
+        for i = 1, NUM_CHAT_WINDOWS do
+            local eb = _G["ChatFrame" .. i .. "EditBox"]
+            if eb then elements[#elements + 1] = eb end
+        end
+    end
+
     for _, f in ipairs(GetThirdPartyFrames()) do
         elements[#elements + 1] = f
     end
@@ -374,6 +385,11 @@ local function InitEditBoxBlock()
     if not ChatFrame_OpenChat then return end
     hooksecurefunc("ChatFrame_OpenChat", function()
         if not ns.isHidden then return end
+        -- Show chat when pressing Enter to type
+        if HideChatDB.showOnEnter then
+            ns.ShowChat(true)
+            return
+        end
         for i = 1, NUM_CHAT_WINDOWS do
             local eb = _G["ChatFrame" .. i .. "EditBox"]
             if eb and eb:HasFocus() then
@@ -1049,6 +1065,9 @@ function ns.PrintDebug()
     print("    combat=" .. tostring(HideChatDB.combat) .. " restore=" .. tostring(HideChatDB.combatRestore))
     print("    inactivity=" .. (HideChatDB.inactivityTimer or 0) .. "s")
     print("    mouseoverReveal=" .. tostring(HideChatDB.mouseoverReveal))
+    print("    mouseoverFadeOut=" .. (HideChatDB.mouseoverFadeOut or 0) .. "s")
+    print("    hideEditBox=" .. tostring(HideChatDB.hideEditBox))
+    print("    showOnEnter=" .. tostring(HideChatDB.showOnEnter))
     print("    raidAutoShow=" .. tostring(HideChatDB.raidAutoShow))
     print("    whisperSound=" .. tostring(HideChatDB.whisperSound))
     print("    colorblind=" .. tostring(HideChatDB.colorblind))
