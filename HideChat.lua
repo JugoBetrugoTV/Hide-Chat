@@ -305,31 +305,32 @@ local function AlphaHide()
     for _, el in ipairs(ns.GetChatElements()) do
         if not alphaBackup[el] then
             alphaBackup[el] = { alpha = el:GetAlpha(), mouse = el:IsMouseEnabled() }
-            if not el._hc_hooked then
-                hooksecurefunc(el, "SetAlpha", function(self, a)
-                    if ns.isHidden and not suppressAlpha and not ns.mouseoverActive then
-                        local t = HideChatDB.opacity or 0
-                        if HideChatDB.alphaMode or t > 0 then
-                            if alphaBackup[self] then alphaBackup[self].alpha = a end
-                            if InCombatLockdown() then
-                                -- Defer to next frame to break the taint chain
-                                C_Timer.After(0, function()
-                                    if ns.isHidden and not suppressAlpha and not ns.mouseoverActive then
-                                        suppressAlpha = true
-                                        self:SetAlpha(t)
-                                        suppressAlpha = false
-                                    end
-                                end)
-                            else
-                                suppressAlpha = true
-                                self:SetAlpha(t)
-                                suppressAlpha = false
-                            end
+        end
+        -- Install SetAlpha guard hook (once per element, persists across cycles)
+        if not el._hc_hooked then
+            hooksecurefunc(el, "SetAlpha", function(self, a)
+                if ns.isHidden and not suppressAlpha and not ns.mouseoverActive then
+                    local t = HideChatDB.opacity or 0
+                    if HideChatDB.alphaMode or t > 0 then
+                        if alphaBackup[self] then alphaBackup[self].alpha = a end
+                        if InCombatLockdown() then
+                            -- Defer to next frame to break the taint chain
+                            C_Timer.After(0, function()
+                                if ns.isHidden and not suppressAlpha and not ns.mouseoverActive then
+                                    suppressAlpha = true
+                                    self:SetAlpha(t)
+                                    suppressAlpha = false
+                                end
+                            end)
+                        else
+                            suppressAlpha = true
+                            self:SetAlpha(t)
+                            suppressAlpha = false
                         end
                     end
-                end)
-                el._hc_hooked = true
-            end
+                end
+            end)
+            el._hc_hooked = true
         end
         suppressAlpha = true
         el:SetAlpha(tgt)

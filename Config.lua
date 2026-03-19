@@ -282,7 +282,7 @@ local function RefreshDeps()
     if widgets.combatRestore       then widgets.combatRestore:SetOptionEnabled(HideChatDB.combat) end
     if widgets.fadeSlider           then widgets.fadeSlider:SetOptionEnabled(HideChatDB.fade) end
     if widgets.mouseoverFadeSlider  then widgets.mouseoverFadeSlider:SetOptionEnabled(HideChatDB.mouseoverReveal) end
-    if widgets.inactivityReshow     then widgets.inactivityReshow:SetOptionEnabled(HideChatDB.inactivityTimer > 0) end
+    if widgets.inactivityReshow     then widgets.inactivityReshow:SetOptionEnabled(true) end
     for _, cb in ipairs(widgets.instChecks or {}) do
         cb:SetOptionEnabled(HideChatDB.instanceHide)
     end
