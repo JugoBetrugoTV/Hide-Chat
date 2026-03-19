@@ -387,7 +387,11 @@ local function InitEditBoxBlock()
         if not ns.isHidden then return end
         -- Show chat when pressing Enter to type
         if HideChatDB.showOnEnter then
+            -- Show instantly (no fade) so user can see chat while typing
+            local savedFade = HideChatDB.fade
+            HideChatDB.fade = false
             ns.ShowChat(true)
+            HideChatDB.fade = savedFade
             -- Re-open chat input; ns.isHidden is now false so the hook won't recurse
             C_Timer.After(0, function()
                 if ChatFrame_OpenChat then
@@ -491,6 +495,16 @@ function ns.HideChat(silent)
     CancelFade()
 
     local tgt = HideChatDB.opacity or 0
+
+    -- Pre-save alpha state BEFORE fade starts so backup captures
+    -- the original alpha (1), not the post-fade value (0).
+    if UseAlphaMethod() then
+        for _, el in ipairs(ns.GetChatElements()) do
+            if not alphaBackup[el] then
+                alphaBackup[el] = { alpha = el:GetAlpha(), mouse = el:IsMouseEnabled() }
+            end
+        end
+    end
 
     local function commit()
         if UseAlphaMethod() then AlphaHide() else ReparentHide() end

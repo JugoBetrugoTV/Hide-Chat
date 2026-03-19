@@ -55,12 +55,15 @@ function ns.InitInactivity()
     pcall(function() f:RegisterEvent("CHAT_MSG_BN_WHISPER_INFORM") end)
 
     f:SetScript("OnEvent", function()
-        if not HideChatDB or HideChatDB.inactivityTimer <= 0 then return end
-        -- New message arrived: optionally re-show, then restart timer
+        if not HideChatDB then return end
+        -- New message arrived: optionally re-show (independent of inactivity timer)
         if ns.isHidden and HideChatDB.inactivityReshow then
             ns.ShowChat(true)
         end
-        StartInactivityTimer()
+        -- Restart inactivity timer if enabled
+        if HideChatDB.inactivityTimer and HideChatDB.inactivityTimer > 0 then
+            StartInactivityTimer()
+        end
     end)
 end
 

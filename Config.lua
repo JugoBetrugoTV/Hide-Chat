@@ -591,7 +591,7 @@ function ns.InitConfig()
         "fade", function() RefreshDeps() end)
     y4 = y4 - 30
     widgets.fadeSlider = Slider(c4, L["Fade duration"], PAD + 8, y4, 210,
-        0.1, 1.0, 0.1, "fadeDuration",
+        0.1, 5.0, 0.1, "fadeDuration",
         function(v) return string.format("%.1fs", v) end)
     y4 = y4 - SROW
     widgets.opacSlider = Slider(c4, L["Hidden opacity"], PAD + 8, y4, 210,
