@@ -125,6 +125,9 @@ if GetLocale() == "zhCN" then
     L["Chat hidden"]                = "聊天已隐藏"
     L["Chat visible"]               = "聊天可见"
 
+    -- Config buttons
+    L["Toggle"]                     = "切换"
+
     -- Tooltips
     L["Status: Hidden"]             = "状态: 已隐藏"
     L["Status: Visible"]            = "状态: 可见"
@@ -287,6 +290,9 @@ if GetLocale() == "deDE" then
     -- Notifications
     L["Chat hidden"]                = "Chat versteckt"
     L["Chat visible"]               = "Chat sichtbar"
+
+    -- Config buttons
+    L["Toggle"]                     = "Umschalten"
 
     -- Tooltips
     L["Status: Hidden"]             = "Status: Versteckt"
@@ -451,6 +457,9 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
     L["Chat hidden"]                = "Chat oculto"
     L["Chat visible"]               = "Chat visible"
 
+    -- Config buttons
+    L["Toggle"]                     = "Alternar"
+
     -- Tooltips
     L["Status: Hidden"]             = "Estado: Oculto"
     L["Status: Visible"]            = "Estado: Visible"
@@ -613,6 +622,9 @@ if GetLocale() == "frFR" then
     -- Notifications
     L["Chat hidden"]                = "Chat masqué"
     L["Chat visible"]               = "Chat visible"
+
+    -- Config buttons
+    L["Toggle"]                     = "Basculer"
 
     -- Tooltips
     L["Status: Hidden"]             = "Statut : Masqué"
@@ -777,6 +789,9 @@ if GetLocale() == "itIT" then
     L["Chat hidden"]                = "Chat nascosta"
     L["Chat visible"]               = "Chat visibile"
 
+    -- Config buttons
+    L["Toggle"]                     = "Attiva/Disattiva"
+
     -- Tooltips
     L["Status: Hidden"]             = "Stato: Nascosto"
     L["Status: Visible"]            = "Stato: Visibile"
@@ -939,6 +954,9 @@ if GetLocale() == "ruRU" then
     -- Notifications
     L["Chat hidden"]                = "Чат скрыт"
     L["Chat visible"]               = "Чат виден"
+
+    -- Config buttons
+    L["Toggle"]                     = "Переключить"
 
     -- Tooltips
     L["Status: Hidden"]             = "Статус: Скрыт"

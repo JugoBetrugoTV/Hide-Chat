@@ -60,7 +60,7 @@ local defaults = {
 ns.isHidden       = false
 ns.mouseoverActive = false
 ns.defaults       = defaults
-ns.version        = "1.4.1"
+ns.version        = "1.5.0"
 
 -- Named constants (avoids magic numbers scattered across files)
 ns.BUTTON_DEFAULT       = { point = "BOTTOMLEFT", x = 4, y = 165 }
@@ -585,6 +585,8 @@ function HideChat_PeekUp()
     if not ns._peekActive then return end
     ns._peekActive = false
     ns.mouseoverActive = false
+    -- Chat was fully shown while peeking (e.g. Enter key, new message) - nothing to restore
+    if not ns.isHidden then return end
     local tgt = HideChatDB.opacity or 0
     if not UseAlphaMethod() then
         for el, _ in pairs(savedParents) do

@@ -58,6 +58,11 @@ local function Card(parent, title, x, y, w, h)
     acc:SetHeight(2); acc:SetPoint("TOPLEFT"); acc:SetPoint("TOPRIGHT")
     sct(acc, C.accent, 0.75)
 
+    -- Subtle header background band
+    local hdrBg = card:CreateTexture(nil, "BACKGROUND", nil, 1)
+    hdrBg:SetHeight(24); hdrBg:SetPoint("TOPLEFT", 1, -2); hdrBg:SetPoint("TOPRIGHT", -1, -2)
+    sct(hdrBg, C.headerBg[1], C.headerBg[2], C.headerBg[3], 0.60)
+
     MakeBorder(card, C.border, 0.40)
 
     if title then
@@ -417,10 +422,13 @@ function ns.InitConfig()
     end)
     f:SetScript("OnHide", function() ns.SaveCurrentProfile() end)
 
-    -- Shadow
-    local shadow = f:CreateTexture(nil, "BACKGROUND", nil, -8)
-    shadow:SetPoint("TOPLEFT", -4, 4); shadow:SetPoint("BOTTOMRIGHT", 4, -4)
-    sct(shadow, 0, 0, 0, 0.45)
+    -- Shadow (multi-layer for depth)
+    local shadow1 = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    shadow1:SetPoint("TOPLEFT", -6, 6); shadow1:SetPoint("BOTTOMRIGHT", 6, -6)
+    sct(shadow1, 0, 0, 0, 0.30)
+    local shadow2 = f:CreateTexture(nil, "BACKGROUND", nil, -7)
+    shadow2:SetPoint("TOPLEFT", -3, 3); shadow2:SetPoint("BOTTOMRIGHT", 3, -3)
+    sct(shadow2, 0, 0, 0, 0.50)
 
     -- Background
     local bg = f:CreateTexture(nil, "BACKGROUND", nil, -5)
@@ -435,12 +443,24 @@ function ns.InitConfig()
     titleBg:SetHeight(titleH); titleBg:SetPoint("TOPLEFT", 1, -1); titleBg:SetPoint("TOPRIGHT", -1, -1)
     sct(titleBg, C.headerBg[1], C.headerBg[2], C.headerBg[3], 1)
 
+    -- Subtle teal glow at top of title bar
+    local titleGlow = f:CreateTexture(nil, "ARTWORK", nil, 1)
+    titleGlow:SetHeight(3); titleGlow:SetPoint("TOPLEFT", 1, -1); titleGlow:SetPoint("TOPRIGHT", -1, -1)
+    sct(titleGlow, C.accent[1], C.accent[2], C.accent[3], 0.15)
+
     -- Accent line
-    local accent = f:CreateTexture(nil, "ARTWORK", nil, 1)
+    local accent = f:CreateTexture(nil, "ARTWORK", nil, 2)
     accent:SetHeight(2)
     accent:SetPoint("TOPLEFT", titleBg, "BOTTOMLEFT")
     accent:SetPoint("TOPRIGHT", titleBg, "BOTTOMRIGHT")
     sct(accent, C.accent, 0.80)
+
+    -- Subtle shadow below accent
+    local accentShadow = f:CreateTexture(nil, "ARTWORK", nil, 1)
+    accentShadow:SetHeight(4)
+    accentShadow:SetPoint("TOPLEFT", accent, "BOTTOMLEFT")
+    accentShadow:SetPoint("TOPRIGHT", accent, "BOTTOMRIGHT")
+    sct(accentShadow, 0, 0, 0, 0.20)
 
     -- Title
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -474,11 +494,32 @@ function ns.InitConfig()
         end
     end)
 
+    -- Toggle button (quick access in title bar)
+    local toggleBtn = CreateFrame("Button", nil, f)
+    toggleBtn:SetSize(70, 20); toggleBtn:SetPoint("TOPRIGHT", -36, -16)
+    local tBg = toggleBtn:CreateTexture(nil, "BACKGROUND")
+    tBg:SetAllPoints(); sct(tBg, C.accentLo, 0.60)
+    local tBrd = toggleBtn:CreateTexture(nil, "BORDER")
+    tBrd:SetPoint("TOPLEFT", -1, 1); tBrd:SetPoint("BOTTOMRIGHT", 1, -1)
+    sct(tBrd, C.accent, 0.25)
+    local tHl = toggleBtn:CreateTexture(nil, "HIGHLIGHT")
+    tHl:SetAllPoints(); sct(tHl, C.accent, 0.15)
+    local tTxt = toggleBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    tTxt:SetPoint("CENTER"); tTxt:SetText("|cFF2DD4BF" .. L["Toggle"] .. "|r")
+    toggleBtn:SetScript("OnClick", function() HideChat_Toggle() end)
+    toggleBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine(L["Toggle Chat Visibility"], 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    toggleBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -- Close button
     local closeBtn = CreateFrame("Button", nil, f)
     closeBtn:SetSize(22, 22); closeBtn:SetPoint("TOPRIGHT", -8, -8)
     local cBg = closeBtn:CreateTexture(nil, "BACKGROUND")
     cBg:SetAllPoints(); sct(cBg, C.danger, 0.12)
+    MakeBorder(closeBtn, C.danger, 0.20)
     local cHl = closeBtn:CreateTexture(nil, "HIGHLIGHT")
     cHl:SetAllPoints(); sct(cHl, C.danger, 0.30)
     local cTxt = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -503,9 +544,9 @@ function ns.InitConfig()
     bar:SetPoint("BOTTOMRIGHT", f, -9, 12)
     bar:SetMinMaxValues(0, 1); bar:SetValueStep(1)
     local barTrack = bar:CreateTexture(nil, "BACKGROUND")
-    barTrack:SetAllPoints(); sct(barTrack, C.border, 0.30)
+    barTrack:SetAllPoints(); sct(barTrack, C.border, 0.20)
     local thumb = bar:CreateTexture(nil, "OVERLAY")
-    thumb:SetSize(5, 36); sct(thumb, C.accent, 0.50)
+    thumb:SetSize(5, 44); sct(thumb, C.accent, 0.60)
     bar:SetThumbTexture(thumb)
 
     local function UpdateScrollRange()
@@ -591,7 +632,7 @@ function ns.InitConfig()
         "fade", function() RefreshDeps() end)
     y4 = y4 - 30
     widgets.fadeSlider = Slider(c4, L["Fade duration"], PAD + 8, y4, 210,
-        0.1, 5.0, 0.1, "fadeDuration",
+        0.1, 10.0, 0.1, "fadeDuration",
         function(v) return string.format("%.1fs", v) end)
     y4 = y4 - SROW
     widgets.opacSlider = Slider(c4, L["Hidden opacity"], PAD + 8, y4, 210,
@@ -814,6 +855,17 @@ function ns.InitConfig()
         "|cFF555555" .. L["Hold to Peek: bindable key, shows chat while held"] .. "|r"
     )
     Y = Y - 120
+
+    -- Footer separator + branding
+    Y = Y - 8
+    local footerLine = content:CreateTexture(nil, "ARTWORK")
+    footerLine:SetHeight(1); footerLine:SetPoint("TOPLEFT", 20, Y); footerLine:SetPoint("TOPRIGHT", -20, Y)
+    sct(footerLine, C.border, 0.30)
+    Y = Y - 14
+    local footer = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    footer:SetPoint("TOPLEFT", 0, Y); footer:SetWidth(CW); footer:SetJustifyH("CENTER")
+    footer:SetText("|cFF333333HideChat v" .. (ns.version or "?") .. "  |cFF444444by JugoBetrugoTV|r")
+    Y = Y - 16
 
     content:SetHeight(math.abs(Y) + 20)
 

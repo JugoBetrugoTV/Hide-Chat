@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120001
 ## Title: HideChat
 ## Notes: Hide and show the chat window with a slash command, keybind or button. (Midnight)
 ## Notes-deDE: Chatfenster mit Befehl, Tastenkürzel oder Knopf ein- und ausblenden. (Mitternacht)
@@ -9,7 +9,7 @@
 ## Notes-ruRU: Скрытие и отображение окна чата с помощью команды, клавиши или кнопки. (Полночь)
 ## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（午夜）
 ## Author: JugoBetrugoTV
-## Version: 1.4.1
+## Version: 1.5.0
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## AddonCompartmentFunc: HideChat_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: HideChat_OnAddonCompartmentEnter

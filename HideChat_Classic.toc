@@ -9,7 +9,7 @@
 ## Notes-ruRU: Скрытие и отображение окна чата с помощью команды, клавиши или кнопки. (Mists of Pandaria Классика)
 ## Notes-zhCN: 使用命令、快捷键或按钮隐藏和显示聊天窗口。（熊猫人之谜 经典版）
 ## Author: JugoBetrugoTV
-## Version: 1.4.1
+## Version: 1.5.0
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## SavedVariables: HideChatDB
 ## SavedVariablesPerCharacter: HideChatCharDB
