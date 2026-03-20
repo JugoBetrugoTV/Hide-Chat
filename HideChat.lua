@@ -383,32 +383,62 @@ end
 -- Block chat edit box while hidden
 ---------------------------------------------------------------------------
 local function InitEditBoxBlock()
-    if not ChatFrame_OpenChat then return end
-    hooksecurefunc("ChatFrame_OpenChat", function()
-        if not ns.isHidden then return end
-        -- Show chat when pressing Enter to type
+    -- Shared handler: show chat when edit box gains focus while hidden
+    local function HandleEditFocus()
+        if not ns.isHidden then return false end
         if HideChatDB.showOnEnter then
             -- Show instantly (no fade) so user can see chat while typing
             local savedFade = HideChatDB.fade
             HideChatDB.fade = false
             ns.ShowChat(true)
             HideChatDB.fade = savedFade
-            -- Re-open chat input; ns.isHidden is now false so the hook won't recurse
-            C_Timer.After(0, function()
-                if ChatFrame_OpenChat then
-                    ChatFrame_OpenChat("")
+            return true
+        end
+        return false
+    end
+
+    -- Hook ChatFrame_OpenChat (primary hook - works in most WoW versions)
+    if ChatFrame_OpenChat then
+        hooksecurefunc("ChatFrame_OpenChat", function()
+            if HandleEditFocus() then
+                -- Re-open chat input; ns.isHidden is now false so the hook won't recurse
+                C_Timer.After(0, function()
+                    if ChatFrame_OpenChat then
+                        ChatFrame_OpenChat("")
+                    end
+                end)
+                return
+            end
+            -- showOnEnter is off: block typing while hidden
+            if ns.isHidden then
+                for i = 1, NUM_CHAT_WINDOWS do
+                    local eb = _G["ChatFrame" .. i .. "EditBox"]
+                    if eb and eb:HasFocus() then
+                        eb:ClearFocus()
+                        eb:Hide()
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Fallback: hook edit box focus directly for WoW versions where Enter
+    -- activates the edit box without going through ChatFrame_OpenChat
+    for i = 1, NUM_CHAT_WINDOWS do
+        local eb = _G["ChatFrame" .. i .. "EditBox"]
+        if eb then
+            eb:HookScript("OnEditFocusGained", function()
+                if not ns.isHidden then return end
+                if HideChatDB.showOnEnter then
+                    HandleEditFocus()
+                else
+                    -- Block typing while hidden
+                    eb:ClearFocus()
+                    eb:Hide()
                 end
             end)
-            return
         end
-        for i = 1, NUM_CHAT_WINDOWS do
-            local eb = _G["ChatFrame" .. i .. "EditBox"]
-            if eb and eb:HasFocus() then
-                eb:ClearFocus()
-                eb:Hide()
-            end
-        end
-    end)
+    end
 end
 
 ---------------------------------------------------------------------------
